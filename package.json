@@ -1,0 +1,27 @@
+{
+  "name": "text-editor",
+  "version": "1.0.0",
+  "description": "Text Editor for  university project",
+  "main": "./src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "cross-env NODE_ENV=development electron . --inspect=5858",
+    "reload": "rs && electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wako104/text-editor.git"
+  },
+  "author": "William Wakeford",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wako104/text-editor/issues"
+  },
+  "homepage": "https://github.com/wako104/text-editor#readme",
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "electron": "^27.0.0",
+    "electron-reloader": "^1.2.3"
+  }
+}
