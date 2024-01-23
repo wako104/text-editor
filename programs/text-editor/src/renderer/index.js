@@ -1,9 +1,9 @@
 window.onload = () => {
-    window.ipc.onFileReady((event, value) => {
-        console.log(value);
-    });
+  window.ipc.onFileReady((event, value) => {
+    console.log(value);
+  });
 
-    document.getElementById("loadfile").addEventListener("click", () => {
-        window.ipc.requestFile()
-    })
+  document.getElementById("loadfile").addEventListener("click", () => {
+    window.ipc.requestFile();
+  });
 };
