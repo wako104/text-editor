@@ -22,12 +22,30 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "index.html"));
 }
 
+//save file in file explorer
+ipcMain.on("createFile", (_event, _arg) => {
+  dialog
+    .showSaveDialog(win, {
+      filters: [{ name: "text files", extensions: ["txt"] }],
+    })
+    .then(({ filePath }) => {
+      console.log("file path: ", filePath);
+      fs.writeFile(filePath, "", (error) => {
+        if (error) {
+          console.log("error");
+          return;
+        }
+        win.webContents.send("file", filePath);
+      });
+    });
+});
+
 //open file from explorer
 ipcMain.on("openFile", (_event, _arg) => {
-  console.log("sendFile");
   dialog
     .showOpenDialog(win, {
       properties: ["openFile"],
+      filters: [{ name: "text files", extensions: ["txt"] }],
     })
     .then((result) => {
       if (result.canceled) {
@@ -42,24 +60,12 @@ ipcMain.on("openFile", (_event, _arg) => {
       const filePath = result.filePaths[0];
       console.log("file selected: ", filePath);
 
-      //send file to renderer
-      // fs.open(filePath, "r", (err, data) => {
-      //   if (err) {
-      //     console.error(err);
-      //     return;
-      //   }
-
-      //   const buffer = Buffer.alloc(1024);
-
-      //   fs.read(data, buffer, 0);
-      // });
-
-      fs.readFile(filePath, (err, data) => {
+      fs.readFile(filePath, "utf8", (err, data) => {
         if (err) throw err;
-        console.log(data);
-      });
+        console.log("readfile: ", data);
 
-      win.webContents.send(data);
+        win.webContents.send("file", { filename: path.parse(filePath).base, data: data });
+      });
     })
     .catch((err) => {
       console.error(err);
@@ -76,9 +82,13 @@ app.whenReady().then(() => {
   });
 });
 
-// close window mac version
-app.on("window-all-closed", () => {
-  if (process.platform !== "darwin") {
-    app.quit();
-  }
+ipcMain.on("value", (_event, value) => {
+  console.log(value);
 });
+
+// close window mac version
+// app.on("window-all-closed", () => {
+//   if (process.platform !== "darwin") {
+//     app.quit();
+//   }
+// });

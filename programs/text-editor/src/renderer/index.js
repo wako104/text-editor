@@ -1,9 +1,21 @@
 window.onload = () => {
+  const el = {
+    documentName: document.getElementById("documentname"),
+    createDocumentBtn: document.getElementById("createfile"),
+    openDocumentBtn: document.getElementById("openfile"),
+    fileTextarea: document.getElementById("maintext"),
+  };
+
   window.ipc.onFileReady((event, value) => {
-    console.log(value);
+    el.documentName.innerHTML = value.filename;
+    el.fileTextarea.value = value.data;
   });
 
-  document.getElementById("loadfile").addEventListener("click", () => {
+  el.createDocumentBtn.addEventListener("click", () => {
+    window.ipc.createFile();
+  });
+
+  el.openDocumentBtn.addEventListener("click", () => {
     window.ipc.requestFile();
   });
 };
