@@ -35,7 +35,7 @@ ipcMain.on("new-file", (_event, _arg) => {
           console.log("error");
           return;
         }
-        win.webContents.send("file", { filename: path.parse(filePath).base });
+        win.webContents.send("file", { filepath: path.parse(filePath) });
       });
     });
 });
@@ -79,12 +79,39 @@ ipcMain.on("open-file", (_event, _arg) => {
 ipcMain.on("save-file", (_event, filePath, fileContent) => {
   let path = filePath.dir + "/" + filePath.base;
   console.log(path);
-  fs.writeFile(path, fileContent, (error) => {
-    if (error) {
-      console.err("couldn't save file");
-    }
-  });
+  if (fs.existsSync(path)) {
+    //if file exists, save to file
+    fs.writeFile(path, fileContent, (error) => {
+      if (error) {
+        console.err("couldn't save file");
+      }
+    });
+  } else {
+    //if file doesn't exist, open dialog to save as new file
+    saveAs(fileContent);
+  }
 });
+
+ipcMain.on("save-as-file", (_event, fileContent) => {
+  saveAs(fileContent);
+});
+
+const saveAs = (fileContent) => {
+  dialog
+    .showSaveDialog(win, {
+      filters: [{ name: "text files", extensions: ["txt"] }],
+    })
+    .then(({ filePath }) => {
+      console.log("file path: ", filePath);
+      fs.writeFile(filePath, fileContent, (error) => {
+        if (error) {
+          console.log("error");
+          return;
+        }
+        win.webContents.send("file", { filepath: path.parse(filePath) });
+      });
+    });
+};
 
 app.whenReady().then(() => {
   createWindow();
