@@ -86,29 +86,37 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
         console.err("couldn't save file");
       }
     });
+    win.webContents.send("file", {
+      filepath: filePath,
+      data: fileContent,
+    });
   } else {
     //if file doesn't exist, open dialog to save as new file
     saveAs(fileContent);
   }
 });
 
+// save as button
 ipcMain.on("save-as-file", (_event, fileContent) => {
   saveAs(fileContent);
 });
 
+// save as function
 const saveAs = (fileContent) => {
   dialog
     .showSaveDialog(win, {
       filters: [{ name: "text files", extensions: ["txt"] }],
     })
     .then(({ filePath }) => {
-      console.log("file path: ", filePath);
       fs.writeFile(filePath, fileContent, (error) => {
         if (error) {
           console.log("error");
           return;
         }
-        win.webContents.send("file", { filepath: path.parse(filePath) });
+        win.webContents.send("file", {
+          filepath: path.parse(filePath),
+          data: fileContent,
+        });
       });
     });
 };

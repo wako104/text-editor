@@ -1,19 +1,20 @@
 let filePathsOpen = [];
+let fileDataList = [];
 let filePathActive = null;
 
 window.onload = () => {
   const el = {
-    documentName: document.getElementById("documentname"),
     createDocumentBtn: document.getElementById("newfile"),
     openDocumentBtn: document.getElementById("openfile"),
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
-    filesOpen: document.getElementById("openfileslist"),
+    fileList: document.getElementById("filelist"),
+    tabList: document.getElementById("tablist"),
   };
 
   window.ipc.onFileReady((event, value) => {
-    console.log(value.filepath);
+    fileDataList.push(value);
     addFileToList(value.filepath);
     if (!value.data) {
       return;
@@ -39,19 +40,46 @@ window.onload = () => {
   });
 
   const addFileToList = (filePath) => {
-    el.documentName.innerHTML = filePath.base;
     filePathsOpen.push(filePath);
     filePathActive = filePath;
-    let listItem = document.createElement("li");
-    listItem.textContent = filePath.base;
-    el.filesOpen.appendChild(listItem);
+    const listItem = document.createElement("li");
+    const listLink = document.createElement("button");
+    listLink.textContent = filePath.base;
+    listLink.addEventListener("click", () => {
+      addTab(filePath);
+    });
+    listItem.appendChild(listLink);
+    el.fileList.appendChild(listItem);
   };
 
   const removeFileFromList = (filePath) => {
-    Array.from(el.filesOpen.children).forEach((item) => {
+    Array.from(el.fileList.children).forEach((item) => {
       if (item.textContent === filePath.base) {
         item.remove();
       }
     });
+  };
+
+  const addTab = (filePath) => {
+    const tabItem = document.createElement("li");
+    const tabLink = document.createElement("button");
+    tabLink.textContent = filePath.base;
+    tabLink.addEventListener("click", () => {
+      displayFile(filePath);
+    });
+    tabItem.appendChild(tabLink);
+    el.tabList.appendChild(tabItem);
+  };
+
+  const displayFile = (filePath) => {
+    let currentFile = null;
+    Array.from(fileDataList).forEach((value) => {
+      if (value.filepath.base === filePath.base) {
+        currentFile = value;
+        return;
+      }
+    });
+    el.fileTextarea.value = currentFile.data;
+    filePathActive = filePath;
   };
 };
