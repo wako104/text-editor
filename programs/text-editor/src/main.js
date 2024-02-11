@@ -64,8 +64,10 @@ ipcMain.on("open-file", (_event, _arg) => {
         if (err) throw err;
         console.log("readfile: ", data);
 
+        let filePathObj = path.parse(filePath);
+        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: path.parse(filePath),
+          filepath: filePathObj,
           data: data,
         });
       });
@@ -77,7 +79,7 @@ ipcMain.on("open-file", (_event, _arg) => {
 
 //save file
 ipcMain.on("save-file", (_event, filePath, fileContent) => {
-  let path = filePath.dir + "/" + filePath.base;
+  let path = filePath.fullpath;
   console.log(path);
   if (fs.existsSync(path)) {
     //if file exists, save to file
@@ -113,8 +115,10 @@ const saveAs = (fileContent) => {
           console.log("error");
           return;
         }
+        let filePathObj = path.parse(filePath);
+        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: path.parse(filePath),
+          filepath: filePathObj,
           data: fileContent,
         });
       });
