@@ -40,6 +40,10 @@ window.onload = () => {
   });
 };
 
+//-------------------------------------------------------------------------------------------------
+// File Management
+//-------------------------------------------------------------------------------------------------
+
 const addFileToList = (filePath) => {
   filePathActive = filePath;
   const listItem = document.createElement("li");
@@ -93,6 +97,10 @@ const fileInList = (filePath) => {
   });
   return found;
 };
+
+//-------------------------------------------------------------------------------------------------
+// Tab Management
+//-------------------------------------------------------------------------------------------------
 
 const addTab = (filePath) => {
   const tabItem = document.createElement("li");
