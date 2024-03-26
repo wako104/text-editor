@@ -1,10 +1,11 @@
 let fileDataList = [];
 let filePathActive = null;
+let openTabs = [];
 let el;
 
 window.onload = () => {
   el = {
-    createDocumentBtn: document.getElementById("newfile"),
+    newDocumentBtn: document.getElementById("newfile"),
     openDocumentBtn: document.getElementById("openfile"),
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
@@ -22,8 +23,8 @@ window.onload = () => {
     }
   });
 
-  el.createDocumentBtn.addEventListener("click", () => {
-    window.ipc.createFile();
+  el.newDocumentBtn.addEventListener("click", () => {
+    window.ipc.newFile();
   });
 
   el.openDocumentBtn.addEventListener("click", () => {
@@ -49,6 +50,7 @@ const addFileToList = (filePath) => {
   const listItem = document.createElement("li");
   const listLink = document.createElement("button");
   listLink.textContent = filePath.base;
+  listLink.setAttribute("file-path", filePath);
   listLink.addEventListener("click", () => {
     addTab(filePath);
   });
@@ -57,7 +59,7 @@ const addFileToList = (filePath) => {
 };
 
 const removeFileFromList = (filePath) => {
-  //remove from file list
+  //remove from file list -------------------------------------- USING FILEPATH.BASE NOT SUFFICIENT
   Array.from(el.fileList.children).forEach((item) => {
     if (item.textContent === filePath.base) {
       item.remove();
@@ -74,7 +76,7 @@ const removeFileFromList = (filePath) => {
 const displayFile = (filePath) => {
   let currentFile = null;
   Array.from(fileDataList).forEach((value) => {
-    if (value.filepath.base === filePath.base) {
+    if (value.filepath.fullpath === filePath.fullpath) {
       currentFile = value;
       return;
     }
@@ -103,13 +105,77 @@ const fileInList = (filePath) => {
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (filePath) => {
+  if (isTabOpen(filePath.fullpath)) {
+    displayFile(filePath);
+    return;
+  }
+
   const tabItem = document.createElement("li");
   const tabLink = document.createElement("button");
+  const closeButton = document.createElement("button");
+
+  // set up tab link
   tabLink.textContent = filePath.base;
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
-    filePathActive = filePath;
   });
+
+  // set up close button
+  closeButton.textContent = "X";
+  closeButton.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeTab(tabItem, filePath);
+  });
+
+  // append tab and close button to tab item
   tabItem.appendChild(tabLink);
+  tabItem.appendChild(closeButton);
+
+  // append tab item to tab list
   el.tabList.appendChild(tabItem);
+
+  // add tab to openTabs list
+  openTabs.push(filePath);
+
+  // display file
+  displayFile(filePath);
+};
+
+const closeTab = (tabItem, filePath) => {
+  // remove tab item
+  tabItem.remove();
+
+  // remove from openTabs list
+  openTabs.forEach((tab, index) => {
+    if (tab.fullpath === filePath.fullpath) {
+      openTabs.splice(index, 1);
+    }
+  });
+
+  // if no other tabs, display nothing
+  if (openTabs.length == 0) {
+    filePathActive = null;
+    el.fileTextarea.value = "";
+    return;
+  }
+
+  // if other tabs available, display first in list
+  if (openTabs.length > 0) {
+    displayFile(openTabs[0]);
+  }
+};
+
+// check if a tab is open
+const isTabOpen = (filePath) => {
+  let found = false;
+
+  openTabs.forEach((item) => {
+    if (filePath == item) {
+      // tab is open
+      found = true;
+    }
+  });
+
+  // tab is not open
+  return found;
 };

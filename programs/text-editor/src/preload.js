@@ -4,7 +4,7 @@ console.log("preload");
 module.exports = IPC = {
   onFileReady: (callback) => ipcRenderer.on("file", callback),
   openFile: () => ipcRenderer.send("open-file"),
-  createFile: () => ipcRenderer.send("new-file"),
+  newFile: () => ipcRenderer.send("new-file"),
   saveFile: (filePath, fileContent) => ipcRenderer.send("save-file", filePath, fileContent),
 };
 
