@@ -44,6 +44,8 @@
     flex-direction: column;
 }
 
+/* tab style ------------------------------------------------------- */
+
 #tabs {
     width: 100%;
     min-height: 40px;
@@ -51,6 +53,25 @@
     background-color: blue;
     border-bottom: 2px black solid;
 }
+
+#tablist {
+    display: flex;
+    list-style-type: none;
+    padding: 0;
+}
+
+#tablist li {
+    margin-right: 5px;
+    background-color: #f0f0f0;
+    border: 1px solid #ccc;
+}
+
+#tablist button {
+    padding: 5px 10px;
+    cursor: pointer;
+}
+
+/* editor style ------------------------------------------------------- */
 
 #editor {
     width: 100%;
