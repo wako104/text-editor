@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
+const { error } = require("console");
 let win;
 
 if (process.env.NODE_ENV === "development") {
@@ -70,6 +71,33 @@ ipcMain.on("open-file", (_event, _arg) => {
           filepath: filePathObj,
           data: data,
         });
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+});
+
+ipcMain.on("open-folder", (_event, _arg) => {
+  dialog
+    .showOpenDialog({
+      properties: ["openDirectory"],
+    })
+    .then((result) => {
+      if (result.canceled) {
+        console.log("canceled");
+        return;
+      }
+
+      const folderPath = result.filePaths[0];
+      console.log("folder selected: ", folderPath);
+
+      fs.readdir(folderPath, (err, files) => {
+        if (err) throw err;
+
+        console.log("folder path: ", folderPath);
+        console.log("folder data: ", files);
+        console.log(files[0].dir);
       });
     })
     .catch((err) => {

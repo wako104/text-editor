@@ -7,6 +7,7 @@ window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
     openDocumentBtn: document.getElementById("openfile"),
+    openFolderBtn: document.getElementById("openfolder"),
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
@@ -23,12 +24,20 @@ window.onload = () => {
     }
   });
 
+  window.ipc.onFolderReady((event, value) => {
+    console.log("folder opened");
+  });
+
   el.newDocumentBtn.addEventListener("click", () => {
     window.ipc.newFile();
   });
 
   el.openDocumentBtn.addEventListener("click", () => {
     window.ipc.openFile();
+  });
+
+  el.openFolderBtn.addEventListener("click", () => {
+    window.ipc.openFolder();
   });
 
   el.saveDocumentBtn.addEventListener("click", () => {
