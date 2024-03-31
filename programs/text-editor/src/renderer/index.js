@@ -11,7 +11,8 @@ window.onload = () => {
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
-    fileList: document.getElementById("filelist"),
+    folderList: document.getElementById("folderlist"),
+    explorer: document.getElementById("explorer"),
     tabList: document.getElementById("tablist"),
   };
 
@@ -25,9 +26,9 @@ window.onload = () => {
   });
 
   window.ipc.onFolderReady((event, value) => {
-    console.log("folder opened");
     console.log(value);
-    addFolder(value.folderPath);
+    console.log(value.path.base);
+    addFolder(value);
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
@@ -66,12 +67,12 @@ const addFileToList = (filePath) => {
     addTab(filePath);
   });
   listItem.appendChild(listLink);
-  el.fileList.appendChild(listItem);
+  el.explorer.appendChild(listItem);
 };
 
 const removeFileFromList = (filePath) => {
   //remove from file list -------------------------------------- USING FILEPATH.BASE NOT SUFFICIENT
-  Array.from(el.fileList.children).forEach((item) => {
+  Array.from(el.explorer.children).forEach((item) => {
     if (item.textContent === filePath.base) {
       item.remove();
     }
@@ -86,7 +87,7 @@ const removeFileFromList = (filePath) => {
 
 const displayFile = (filePath) => {
   let currentFile = null;
-  Array.from(fileDataList).forEach((value) => {
+  fileDataList.forEach((value) => {
     if (value.filepath.fullpath === filePath.fullpath) {
       currentFile = value;
       return;
@@ -115,7 +116,25 @@ const fileInList = (filePath) => {
 // Folder Management
 //-------------------------------------------------------------------------------------------------
 
-const addFolder = (folderPath) => {
+const addFolder = (folder) => {
+  folderPath = folder.path;
+  contents = folder.contents;
+  folderItem = document.createElement("li");
+  folderLink = document.createElement("button");
+
+  // set up folder link
+  folderLink.textContent = folderPath.base;
+
+  // add link to folder item
+  folderItem.appendChild(folderLink);
+
+  // add folder item to list
+  el.explorer.appendChild(folderItem);
+
+  contents.forEach((item) => {
+    // if the content is file, add file, if content is folder - recursion
+  });
+
   return;
 };
 

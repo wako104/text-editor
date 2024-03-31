@@ -23,7 +23,7 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "index.html"));
 }
 
-//save file in file explorer
+// save file in file explorer
 ipcMain.on("new-file", (_event, _arg) => {
   dialog
     .showSaveDialog(win, {
@@ -94,14 +94,12 @@ ipcMain.on("open-folder", (_event, _arg) => {
       console.log("folder selected: ", folderPath);
 
       contents = getFolderContents(folderPath);
-      console.log("contents:", contents);
-      console.log(contents[2].files);
 
-      fs.readdir(folderPath, (err, files) => {
-        if (err) throw err;
-      });
+      let folderPathObj = path.parse(folderPath);
+      folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
 
       win.webContents.send("folder", {
+        path: folderPathObj,
         contents: contents,
       });
     })
@@ -110,12 +108,12 @@ ipcMain.on("open-folder", (_event, _arg) => {
     });
 });
 
-//save file
+// save file
 ipcMain.on("save-file", (_event, filePath, fileContent) => {
   let path = filePath.fullpath;
   console.log(path);
   if (fs.existsSync(path)) {
-    //if file exists, save to file
+    // if file exists, save to file
     fs.writeFile(path, fileContent, (error) => {
       if (error) {
         console.err("couldn't save file");
@@ -126,7 +124,7 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
       data: fileContent,
     });
   } else {
-    //if file doesn't exist, open dialog to save as new file
+    // if file doesn't exist, open dialog to save as new file
     saveAs(fileContent);
   }
 });
