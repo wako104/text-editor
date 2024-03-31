@@ -26,6 +26,8 @@ window.onload = () => {
 
   window.ipc.onFolderReady((event, value) => {
     console.log("folder opened");
+    console.log(value);
+    addFolder(value.folderPath);
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
@@ -110,11 +112,19 @@ const fileInList = (filePath) => {
 };
 
 //-------------------------------------------------------------------------------------------------
+// Folder Management
+//-------------------------------------------------------------------------------------------------
+
+const addFolder = (folderPath) => {
+  return;
+};
+
+//-------------------------------------------------------------------------------------------------
 // Tab Management
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (filePath) => {
-  if (isTabOpen(filePath.fullpath)) {
+  if (isTabOpen(filePath)) {
     displayFile(filePath);
     return;
   }
@@ -179,7 +189,7 @@ const isTabOpen = (filePath) => {
   let found = false;
 
   openTabs.forEach((item) => {
-    if (filePath == item) {
+    if (filePath.fullpath == item.fullpath) {
       // tab is open
       found = true;
     }

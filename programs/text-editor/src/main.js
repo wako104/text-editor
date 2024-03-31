@@ -78,6 +78,7 @@ ipcMain.on("open-file", (_event, _arg) => {
     });
 });
 
+// open folder from explorer
 ipcMain.on("open-folder", (_event, _arg) => {
   dialog
     .showOpenDialog({
@@ -92,12 +93,16 @@ ipcMain.on("open-folder", (_event, _arg) => {
       const folderPath = result.filePaths[0];
       console.log("folder selected: ", folderPath);
 
+      contents = getFolderContents(folderPath);
+      console.log("contents:", contents);
+      console.log(contents[2].files);
+
       fs.readdir(folderPath, (err, files) => {
         if (err) throw err;
+      });
 
-        console.log("folder path: ", folderPath);
-        console.log("folder data: ", files);
-        console.log(files[0].dir);
+      win.webContents.send("folder", {
+        contents: contents,
       });
     })
     .catch((err) => {
@@ -130,6 +135,29 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
 ipcMain.on("save-as-file", (_event, fileContent) => {
   saveAs(fileContent);
 });
+
+const getFolderContents = (folderPath, depth = 0) => {
+  let contents = [];
+
+  const files = fs.readdirSync(folderPath);
+  files.forEach((file) => {
+    if (file.startsWith(".")) {
+      return;
+    }
+    const fullPath = path.join(folderPath, file);
+    const stats = fs.statSync(fullPath);
+
+    if (stats.isDirectory()) {
+      depth++;
+      const subFolderContents = getFolderContents(fullPath, depth);
+      contents.push({ folder: file, files: subFolderContents, depth: depth - 1 });
+    } else {
+      contents.push({ file: file, depth: depth });
+    }
+  });
+
+  return contents;
+};
 
 // save as function
 const saveAs = (fileContent) => {
