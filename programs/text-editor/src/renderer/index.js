@@ -17,17 +17,17 @@ window.onload = () => {
   };
 
   window.ipc.onFileReady((event, value) => {
-    if (!fileInList(value.filepath)) {
+    if (!fileInList(value.path)) {
       fileDataList.push(value);
-      addFileToList(value.filepath);
+      addFileToList(value.path);
     } else {
+      // ---------------------------------- REPLACE FILELIST VALUE WITH DATA
       console.log("file in list");
     }
   });
 
   window.ipc.onFolderReady((event, value) => {
     console.log(value);
-    console.log(value.path.base);
     addFolder(value);
   });
 
@@ -79,7 +79,7 @@ const removeFileFromList = (filePath) => {
   });
   //remove from data list
   fileDataList.forEach((file, index) => {
-    if (file.filepath.fullpath === filePath.fullpath) {
+    if (file.path.fullpath === filePath.fullpath) {
       fileDataList.splice(index, 1);
     }
   });
@@ -88,7 +88,7 @@ const removeFileFromList = (filePath) => {
 const displayFile = (filePath) => {
   let currentFile = null;
   fileDataList.forEach((value) => {
-    if (value.filepath.fullpath === filePath.fullpath) {
+    if (value.path.fullpath === filePath.fullpath) {
       currentFile = value;
       return;
     }
@@ -104,7 +104,7 @@ const areFilesEqual = (file1, file2) => {
 const fileInList = (filePath) => {
   let found = false;
   fileDataList.forEach((file) => {
-    if (areFilesEqual(filePath, file.filepath)) {
+    if (areFilesEqual(filePath, file.path)) {
       found = true;
       return;
     }
@@ -118,7 +118,7 @@ const fileInList = (filePath) => {
 
 const addFolder = (folder) => {
   folderPath = folder.path;
-  contents = folder.contents;
+  contents = folder.data;
   folderItem = document.createElement("li");
   folderLink = document.createElement("button");
 
@@ -132,7 +132,21 @@ const addFolder = (folder) => {
   el.explorer.appendChild(folderItem);
 
   contents.forEach((item) => {
-    // if the content is file, add file, if content is folder - recursion
+    // if item is a file, add as file
+    if (item.type == "file") {
+      if (!fileInList(item.path)) {
+        fileDataList.push(item);
+        addFileToList(item.path);
+      } else {
+        // ---------------------------------- REPLACE FILELIST VALUE WITH DATA
+        console.log("file in list");
+      }
+    }
+
+    // if item is a folder, use recursion
+    if (item.type == "folder") {
+      addFolder(item);
+    }
   });
 
   return;

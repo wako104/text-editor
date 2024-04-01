@@ -93,14 +93,21 @@ ipcMain.on("open-folder", (_event, _arg) => {
       const folderPath = result.filePaths[0];
       console.log("folder selected: ", folderPath);
 
-      contents = getFolderContents(folderPath);
+      // create new window
+      createWindow();
 
-      let folderPathObj = path.parse(folderPath);
-      folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
+      // make sure window is loaded before sending data
+      win.webContents.on("did-finish-load", () => {
+        contents = getFolderContents(folderPath);
 
-      win.webContents.send("folder", {
-        path: folderPathObj,
-        contents: contents,
+        let folderPathObj = path.parse(folderPath);
+        folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
+
+        win.webContents.send("folder", {
+          path: folderPathObj,
+          data: contents,
+          depth: 0,
+        });
       });
     })
     .catch((err) => {
@@ -120,7 +127,7 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
       }
     });
     win.webContents.send("file", {
-      filepath: filePath,
+      path: filePath,
       data: fileContent,
     });
   } else {
@@ -134,23 +141,43 @@ ipcMain.on("save-as-file", (_event, fileContent) => {
   saveAs(fileContent);
 });
 
-const getFolderContents = (folderPath, depth = 0) => {
+const getFolderContents = (folderPath, depth = 1) => {
   let contents = [];
 
   const files = fs.readdirSync(folderPath);
+
+  // for each file in directory
   files.forEach((file) => {
+    // exclude hidden files
     if (file.startsWith(".")) {
       return;
     }
     const fullPath = path.join(folderPath, file);
     const stats = fs.statSync(fullPath);
+    const filePathObj = path.parse(fullPath);
+    filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
 
+    // if the file is a directory
     if (stats.isDirectory()) {
+      // increase depth
       depth++;
+
+      // use recursion for contents inside subfolder
       const subFolderContents = getFolderContents(fullPath, depth);
-      contents.push({ folder: file, files: subFolderContents, depth: depth - 1 });
+
+      // push folder to contents
+      contents.push({
+        type: "folder",
+        path: filePathObj,
+        data: subFolderContents,
+        depth: depth - 1,
+      });
     } else {
-      contents.push({ file: file, depth: depth });
+      // get file contents
+      const data = fs.readFileSync(fullPath, "utf-8");
+
+      // push file to contents
+      contents.push({ type: "file", path: filePathObj, data: data, depth: depth });
     }
   });
 
