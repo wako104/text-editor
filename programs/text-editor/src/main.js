@@ -68,7 +68,7 @@ ipcMain.on("open-file", (_event, _arg) => {
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: filePathObj,
+          path: filePathObj,
           data: data,
         });
       });

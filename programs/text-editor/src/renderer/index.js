@@ -17,13 +17,7 @@ window.onload = () => {
   };
 
   window.ipc.onFileReady((event, value) => {
-    if (!fileInList(value.path)) {
-      fileDataList.push(value);
-      addFileToList(value.path);
-    } else {
-      // ---------------------------------- REPLACE FILELIST VALUE WITH DATA
-      console.log("file in list");
-    }
+    handleOpenFile(value);
   });
 
   window.ipc.onFolderReady((event, value) => {
@@ -56,6 +50,17 @@ window.onload = () => {
 //-------------------------------------------------------------------------------------------------
 // File Management
 //-------------------------------------------------------------------------------------------------
+
+const handleOpenFile = (file) => {
+  if (!fileInList(file.path)) {
+    fileDataList.push(file);
+    addFileToList(file.path);
+  } else {
+    // if the file is already open in the explorer
+    //----------------------------------------------- ASK USER - ARE YOU SURE?
+    replaceFileData(file);
+  }
+};
 
 const addFileToList = (filePath) => {
   filePathActive = filePath;
@@ -112,6 +117,18 @@ const fileInList = (filePath) => {
   return found;
 };
 
+const replaceFileData = (file) => {
+  fileDataList.forEach((listFile) => {
+    if (areFilesEqual(listFile.path, file.path)) {
+      console.log(filePathActive);
+      listFile.data = file.data;
+      if (filePathActive.fullpath === file.path.fullpath) {
+        displayFile(file.path);
+      }
+    }
+  });
+};
+
 //-------------------------------------------------------------------------------------------------
 // Folder Management
 //-------------------------------------------------------------------------------------------------
@@ -138,12 +155,11 @@ const addFolder = (folder) => {
         fileDataList.push(item);
         addFileToList(item.path);
       } else {
-        // ---------------------------------- REPLACE FILELIST VALUE WITH DATA
-        console.log("file in list");
+        replaceFileData(value);
       }
     }
 
-    // if item is a folder, use recursion
+    // if item is a folder, use recursion to add items
     if (item.type == "folder") {
       addFolder(item);
     }
