@@ -1,6 +1,7 @@
 const { app, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
+const { error } = require("console");
 let win;
 
 if (process.env.NODE_ENV === "development") {
@@ -22,7 +23,7 @@ function createWindow() {
   win.loadFile(path.join(__dirname, "index.html"));
 }
 
-//save file in file explorer
+// save file in file explorer
 ipcMain.on("new-file", (_event, _arg) => {
   dialog
     .showSaveDialog(win, {
@@ -67,7 +68,7 @@ ipcMain.on("open-file", (_event, _arg) => {
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: filePathObj,
+          path: filePathObj,
           data: data,
         });
       });
@@ -77,23 +78,60 @@ ipcMain.on("open-file", (_event, _arg) => {
     });
 });
 
-//save file
+// open folder from explorer
+ipcMain.on("open-folder", (_event, _arg) => {
+  dialog
+    .showOpenDialog({
+      properties: ["openDirectory"],
+    })
+    .then((result) => {
+      if (result.canceled) {
+        console.log("canceled");
+        return;
+      }
+
+      const folderPath = result.filePaths[0];
+      console.log("folder selected: ", folderPath);
+
+      // create new window
+      createWindow();
+
+      // make sure window is loaded before sending data
+      win.webContents.on("did-finish-load", () => {
+        contents = getFolderContents(folderPath);
+
+        let folderPathObj = path.parse(folderPath);
+        folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
+
+        win.webContents.send("folder", {
+          path: folderPathObj,
+          data: contents,
+          depth: 0,
+        });
+      });
+    })
+    .catch((err) => {
+      console.error(err);
+    });
+});
+
+// save file
 ipcMain.on("save-file", (_event, filePath, fileContent) => {
   let path = filePath.fullpath;
   console.log(path);
   if (fs.existsSync(path)) {
-    //if file exists, save to file
+    // if file exists, save to file
     fs.writeFile(path, fileContent, (error) => {
       if (error) {
         console.err("couldn't save file");
       }
     });
     win.webContents.send("file", {
-      filepath: filePath,
+      path: filePath,
       data: fileContent,
     });
   } else {
-    //if file doesn't exist, open dialog to save as new file
+    // if file doesn't exist, open dialog to save as new file
     saveAs(fileContent);
   }
 });
@@ -102,6 +140,49 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
 ipcMain.on("save-as-file", (_event, fileContent) => {
   saveAs(fileContent);
 });
+
+const getFolderContents = (folderPath, depth = 1) => {
+  let contents = [];
+
+  const files = fs.readdirSync(folderPath);
+
+  // for each file in directory
+  files.forEach((file) => {
+    // exclude hidden files
+    if (file.startsWith(".")) {
+      return;
+    }
+    const fullPath = path.join(folderPath, file);
+    const stats = fs.statSync(fullPath);
+    const filePathObj = path.parse(fullPath);
+    filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
+
+    // if the file is a directory
+    if (stats.isDirectory()) {
+      // increase depth
+      depth++;
+
+      // use recursion for contents inside subfolder
+      const subFolderContents = getFolderContents(fullPath, depth);
+
+      // push folder to contents
+      contents.push({
+        type: "folder",
+        path: filePathObj,
+        data: subFolderContents,
+        depth: depth - 1,
+      });
+    } else {
+      // get file contents
+      const data = fs.readFileSync(fullPath, "utf-8");
+
+      // push file to contents
+      contents.push({ type: "file", path: filePathObj, data: data, depth: depth });
+    }
+  });
+
+  return contents;
+};
 
 // save as function
 const saveAs = (fileContent) => {

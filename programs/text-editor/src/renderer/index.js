@@ -7,20 +7,22 @@ window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
     openDocumentBtn: document.getElementById("openfile"),
+    openFolderBtn: document.getElementById("openfolder"),
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
-    fileList: document.getElementById("filelist"),
+    folderList: document.getElementById("folderlist"),
+    explorer: document.getElementById("explorer"),
     tabList: document.getElementById("tablist"),
   };
 
   window.ipc.onFileReady((event, value) => {
-    if (!fileInList(value.filepath)) {
-      fileDataList.push(value);
-      addFileToList(value.filepath);
-    } else {
-      console.log("file in list");
-    }
+    handleOpenFile(value);
+  });
+
+  window.ipc.onFolderReady((event, value) => {
+    console.log(value);
+    addFolder(value);
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
@@ -29,6 +31,10 @@ window.onload = () => {
 
   el.openDocumentBtn.addEventListener("click", () => {
     window.ipc.openFile();
+  });
+
+  el.openFolderBtn.addEventListener("click", () => {
+    window.ipc.openFolder();
   });
 
   el.saveDocumentBtn.addEventListener("click", () => {
@@ -45,6 +51,17 @@ window.onload = () => {
 // File Management
 //-------------------------------------------------------------------------------------------------
 
+const handleOpenFile = (file) => {
+  if (!fileInList(file.path)) {
+    fileDataList.push(file);
+    addFileToList(file.path);
+  } else {
+    // if the file is already open in the explorer
+    //----------------------------------------------- ASK USER - ARE YOU SURE?
+    replaceFileData(file);
+  }
+};
+
 const addFileToList = (filePath) => {
   filePathActive = filePath;
   const listItem = document.createElement("li");
@@ -55,19 +72,19 @@ const addFileToList = (filePath) => {
     addTab(filePath);
   });
   listItem.appendChild(listLink);
-  el.fileList.appendChild(listItem);
+  el.explorer.appendChild(listItem);
 };
 
 const removeFileFromList = (filePath) => {
   //remove from file list -------------------------------------- USING FILEPATH.BASE NOT SUFFICIENT
-  Array.from(el.fileList.children).forEach((item) => {
+  Array.from(el.explorer.children).forEach((item) => {
     if (item.textContent === filePath.base) {
       item.remove();
     }
   });
   //remove from data list
   fileDataList.forEach((file, index) => {
-    if (file.filepath.fullpath === filePath.fullpath) {
+    if (file.path.fullpath === filePath.fullpath) {
       fileDataList.splice(index, 1);
     }
   });
@@ -75,8 +92,8 @@ const removeFileFromList = (filePath) => {
 
 const displayFile = (filePath) => {
   let currentFile = null;
-  Array.from(fileDataList).forEach((value) => {
-    if (value.filepath.fullpath === filePath.fullpath) {
+  fileDataList.forEach((value) => {
+    if (value.path.fullpath === filePath.fullpath) {
       currentFile = value;
       return;
     }
@@ -92,7 +109,7 @@ const areFilesEqual = (file1, file2) => {
 const fileInList = (filePath) => {
   let found = false;
   fileDataList.forEach((file) => {
-    if (areFilesEqual(filePath, file.filepath)) {
+    if (areFilesEqual(filePath, file.path)) {
       found = true;
       return;
     }
@@ -100,12 +117,63 @@ const fileInList = (filePath) => {
   return found;
 };
 
+const replaceFileData = (file) => {
+  fileDataList.forEach((listFile) => {
+    if (areFilesEqual(listFile.path, file.path)) {
+      console.log(filePathActive);
+      listFile.data = file.data;
+      if (filePathActive.fullpath === file.path.fullpath) {
+        displayFile(file.path);
+      }
+    }
+  });
+};
+
+//-------------------------------------------------------------------------------------------------
+// Folder Management
+//-------------------------------------------------------------------------------------------------
+
+const addFolder = (folder) => {
+  folderPath = folder.path;
+  contents = folder.data;
+  folderItem = document.createElement("li");
+  folderLink = document.createElement("button");
+
+  // set up folder link
+  folderLink.textContent = folderPath.base;
+
+  // add link to folder item
+  folderItem.appendChild(folderLink);
+
+  // add folder item to list
+  el.explorer.appendChild(folderItem);
+
+  contents.forEach((item) => {
+    // if item is a file, add as file
+    if (item.type == "file") {
+      if (!fileInList(item.path)) {
+        fileDataList.push(item);
+        addFileToList(item.path);
+      } else {
+        replaceFileData(value);
+      }
+    }
+
+    // if item is a folder, use recursion to add items
+    if (item.type == "folder") {
+      addFolder(item);
+    }
+  });
+
+  return;
+};
+
 //-------------------------------------------------------------------------------------------------
 // Tab Management
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (filePath) => {
-  if (isTabOpen(filePath.fullpath)) {
+  if (isTabOpen(filePath)) {
     displayFile(filePath);
     return;
   }
@@ -170,7 +238,7 @@ const isTabOpen = (filePath) => {
   let found = false;
 
   openTabs.forEach((item) => {
-    if (filePath == item) {
+    if (filePath.fullpath == item.fullpath) {
       // tab is open
       found = true;
     }
