@@ -1,13 +1,16 @@
-const { app, BrowserWindow, ipcMain, dialog } = require("electron");
+const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
 const { error } = require("console");
 let win;
 
+const isMac = process.platform === "darwin";
+
 if (process.env.NODE_ENV === "development") {
   require("electron-reloader")(module);
 }
 
+// create main window
 function createWindow() {
   win = new BrowserWindow({
     width: 800,
@@ -22,6 +25,10 @@ function createWindow() {
   win.webContents.openDevTools();
   win.loadFile(path.join(__dirname, "index.html"));
 }
+
+//-------------------------------------------------------------------------------------------------
+// ipc processes
+//-------------------------------------------------------------------------------------------------
 
 // save file in file explorer
 ipcMain.on("new-file", (_event, _arg) => {
@@ -43,6 +50,10 @@ ipcMain.on("new-file", (_event, _arg) => {
 
 //open file from explorer
 ipcMain.on("open-file", (_event, _arg) => {
+  openFile();
+});
+
+const openFile = () => {
   dialog
     .showOpenDialog(win, {
       properties: ["openFile"],
@@ -70,16 +81,21 @@ ipcMain.on("open-file", (_event, _arg) => {
         win.webContents.send("file", {
           path: filePathObj,
           data: data,
+          depth: 0,
         });
       });
     })
     .catch((err) => {
       console.error(err);
     });
-});
+};
 
 // open folder from explorer
 ipcMain.on("open-folder", (_event, _arg) => {
+  openFolder();
+});
+
+function openFolder() {
   dialog
     .showOpenDialog({
       properties: ["openDirectory"],
@@ -93,7 +109,7 @@ ipcMain.on("open-folder", (_event, _arg) => {
       const folderPath = result.filePaths[0];
       console.log("folder selected: ", folderPath);
 
-      // create new window
+      // create new window --------------------------------- IF CURRENT WINDOW NOT EMPTY
       createWindow();
 
       // make sure window is loaded before sending data
@@ -113,7 +129,51 @@ ipcMain.on("open-folder", (_event, _arg) => {
     .catch((err) => {
       console.error(err);
     });
-});
+}
+
+const getFolderContents = (folderPath, depth = 1) => {
+  let contents = [];
+
+  const files = fs.readdirSync(folderPath);
+
+  // for each file in directory
+  files.forEach((file) => {
+    // exclude hidden files
+    if (file.startsWith(".")) {
+      return;
+    }
+    const fullPath = path.join(folderPath, file);
+    const stats = fs.statSync(fullPath);
+    const filePathObj = path.parse(fullPath);
+    filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
+
+    // if the file is a directory
+    if (stats.isDirectory()) {
+      // use recursion for contents inside subfolder
+      const subFolderContents = getFolderContents(fullPath, depth + 1);
+
+      // push folder to contents
+      contents.push({
+        type: "folder",
+        path: filePathObj,
+        data: subFolderContents,
+        depth,
+      });
+    } else {
+      // get file contents
+      const data = fs.readFileSync(fullPath, "utf-8");
+
+      // push file to contents
+      contents.push({ type: "file", path: filePathObj, data, depth });
+    }
+  });
+
+  return contents;
+};
+
+const saveFile = () => {
+  window.ipc.send("get-save");
+};
 
 // save file
 ipcMain.on("save-file", (_event, filePath, fileContent) => {
@@ -141,49 +201,6 @@ ipcMain.on("save-as-file", (_event, fileContent) => {
   saveAs(fileContent);
 });
 
-const getFolderContents = (folderPath, depth = 1) => {
-  let contents = [];
-
-  const files = fs.readdirSync(folderPath);
-
-  // for each file in directory
-  files.forEach((file) => {
-    // exclude hidden files
-    if (file.startsWith(".")) {
-      return;
-    }
-    const fullPath = path.join(folderPath, file);
-    const stats = fs.statSync(fullPath);
-    const filePathObj = path.parse(fullPath);
-    filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
-
-    // if the file is a directory
-    if (stats.isDirectory()) {
-      // increase depth
-      depth++;
-
-      // use recursion for contents inside subfolder
-      const subFolderContents = getFolderContents(fullPath, depth);
-
-      // push folder to contents
-      contents.push({
-        type: "folder",
-        path: filePathObj,
-        data: subFolderContents,
-        depth: depth - 1,
-      });
-    } else {
-      // get file contents
-      const data = fs.readFileSync(fullPath, "utf-8");
-
-      // push file to contents
-      contents.push({ type: "file", path: filePathObj, data: data, depth: depth });
-    }
-  });
-
-  return contents;
-};
-
 // save as function
 const saveAs = (fileContent) => {
   dialog
@@ -201,13 +218,22 @@ const saveAs = (fileContent) => {
         win.webContents.send("file", {
           filepath: filePathObj,
           data: fileContent,
+          depth: 0,
         });
       });
     });
 };
 
+//-------------------------------------------------------------------------------------------------
+// App is ready
+//-------------------------------------------------------------------------------------------------
+
 app.whenReady().then(() => {
   createWindow();
+
+  // implement window
+  const mainMenu = Menu.buildFromTemplate(menu);
+  Menu.setApplicationMenu(mainMenu);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -216,9 +242,60 @@ app.whenReady().then(() => {
   });
 });
 
+//-------------------------------------------------------------------------------------------------
+// Menu Template
+//-------------------------------------------------------------------------------------------------
+
+const menu = [
+  ...(isMac
+    ? [
+        {
+          label: app.name,
+          submenu: [
+            {
+              label: "About",
+            },
+          ],
+        },
+      ]
+    : []),
+  {
+    label: "File",
+    submenu: [
+      {
+        label: "Open File...",
+        click: () => {
+          openFile();
+        },
+      },
+      {
+        label: "Open Folder...",
+        click: () => {
+          openFolder();
+        },
+      },
+      {
+        type: "separator",
+      },
+      {
+        label: "Save As",
+      },
+    ],
+  },
+  {
+    role: "editMenu",
+  },
+  {
+    role: "viewMenu",
+  },
+  {
+    role: "windowMenu",
+  },
+];
+
 // close window mac version
 // app.on("window-all-closed", () => {
-//   if (process.platform !== "darwin") {
+//   if (!isMac) {
 //     app.quit();
 //   }
 // });

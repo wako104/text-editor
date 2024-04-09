@@ -6,35 +6,31 @@ let el;
 window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
-    openDocumentBtn: document.getElementById("openfile"),
-    openFolderBtn: document.getElementById("openfolder"),
     saveDocumentBtn: document.getElementById("savefile"),
     closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
     folderList: document.getElementById("folderlist"),
-    explorer: document.getElementById("explorer"),
+    explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
   };
 
-  window.ipc.onFileReady((event, value) => {
+  window.ipc.onFileReady((_event, value) => {
     handleOpenFile(value);
   });
 
-  window.ipc.onFolderReady((event, value) => {
+  window.ipc.onFolderReady((_event, value) => {
     console.log(value);
     addFolder(value);
+    addFolderEventListeners();
+  });
+
+  window.ipc.onGetFile((_event, _arg) => {
+    content = el.fileTextarea.value;
+    window.ipc.saveFile(filePathActive, content);
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
     window.ipc.newFile();
-  });
-
-  el.openDocumentBtn.addEventListener("click", () => {
-    window.ipc.openFile();
-  });
-
-  el.openFolderBtn.addEventListener("click", () => {
-    window.ipc.openFolder();
   });
 
   el.saveDocumentBtn.addEventListener("click", () => {
@@ -51,10 +47,10 @@ window.onload = () => {
 // File Management
 //-------------------------------------------------------------------------------------------------
 
-const handleOpenFile = (file) => {
+const handleOpenFile = (file, parent = el.explorer) => {
   if (!fileInList(file.path)) {
     fileDataList.push(file);
-    addFileToList(file.path);
+    addFileToList(file, parent);
   } else {
     // if the file is already open in the explorer
     //----------------------------------------------- ASK USER - ARE YOU SURE?
@@ -62,17 +58,27 @@ const handleOpenFile = (file) => {
   }
 };
 
-const addFileToList = (filePath) => {
+const addFileToList = (file, parent) => {
+  let filePath = file.path;
   filePathActive = filePath;
-  const listItem = document.createElement("li");
-  const listLink = document.createElement("button");
-  listLink.textContent = filePath.base;
-  listLink.setAttribute("file-path", filePath);
-  listLink.addEventListener("click", () => {
+
+  // set up file item
+  let fileItem = document.createElement("li");
+
+  // set up file link
+  let fileLink = document.createElement("button");
+  fileLink.textContent = filePath.base;
+
+  // add event listener - add tab - to file
+  fileLink.addEventListener("click", () => {
     addTab(filePath);
   });
-  listItem.appendChild(listLink);
-  el.explorer.appendChild(listItem);
+
+  // add link to file item
+  fileItem.appendChild(fileLink);
+
+  //add file item to it's parent (root folder parent is explorer)
+  parent.appendChild(fileItem);
 };
 
 const removeFileFromList = (filePath) => {
@@ -133,39 +139,55 @@ const replaceFileData = (file) => {
 // Folder Management
 //-------------------------------------------------------------------------------------------------
 
-const addFolder = (folder) => {
-  folderPath = folder.path;
-  contents = folder.data;
-  folderItem = document.createElement("li");
-  folderLink = document.createElement("button");
+const addFolder = (folder, parent = el.explorer) => {
+  let folderPath = folder.path;
+  let contents = folder.data;
+
+  let folderItem = document.createElement("li");
+  folderItem.setAttribute("data-type", "folder");
 
   // set up folder link
+  let folderLink = document.createElement("button");
   folderLink.textContent = folderPath.base;
+
+  console.log("link: ", folderLink);
+  console.log("item: ", folderItem);
+  console.log(parent);
 
   // add link to folder item
   folderItem.appendChild(folderLink);
-
   // add folder item to list
-  el.explorer.appendChild(folderItem);
+  parent.appendChild(folderItem);
 
   contents.forEach((item) => {
     // if item is a file, add as file
     if (item.type == "file") {
-      if (!fileInList(item.path)) {
-        fileDataList.push(item);
-        addFileToList(item.path);
-      } else {
-        replaceFileData(value);
-      }
+      // ------------------------------------------------------------- find parent through filepath
+      handleOpenFile(item, folderItem);
     }
 
     // if item is a folder, use recursion to add items
     if (item.type == "folder") {
-      addFolder(item);
+      addFolder(item, folderItem);
     }
   });
+};
 
-  return;
+// adds event listener - hide files - to all folders
+const addFolderEventListeners = () => {
+  const folderElements = document.querySelectorAll("[data-type='folder']");
+  console.log(folderElements);
+
+  let root = folderElements[0];
+  root.addEventListener("click", ({ target }) => {
+    let sibling = target.nextElementSibling;
+
+    while (sibling) {
+      sibling.style.display = sibling.style.display == "none" ? "block" : "none";
+      sibling = sibling.nextElementSibling;
+    }
+    console.log(target.nextElementSibling);
+  });
 };
 
 //-------------------------------------------------------------------------------------------------
