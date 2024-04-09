@@ -1,5 +1,6 @@
 :root {
     --primary-bg-color: #3B3B3B;
+    --hover-color: #525252;
 }
 
 * {
@@ -71,13 +72,18 @@ body {
 
 #tablist li {
     margin-right: 5px;
-    background-color: #f0f0f0;
     border: 1px solid #ccc;
 }
 
 #tablist button {
     padding: 5px 10px;
     cursor: pointer;
+    border: none;
+    background: none;
+}
+
+#tablist .closebutton:hover {
+    background-color: var(--hover-color);
 }
 
 /* editor style ------------------------------------------------------- */
@@ -89,6 +95,7 @@ body {
 }
 
 #maintext {
+    color: black;
     width: 100%;
     border: none;
     resize: none;
@@ -122,10 +129,25 @@ body {
 }
 
 #exploreritems li button {
+    font-size: 14px;
+    padding: 2px;
     width: 100%;
     text-align: left;
     cursor: pointer;
     border: none;
     background: none;
-    text-decoration: none;
+}
+
+#exploreritems li button:hover  {
+    background-color: #525252;
+}
+
+#exploreritems #folder i {
+    aspect-ratio: 1/1;
+    padding-right: 5px;
+    transition: transform 0.3s ease;
+}
+
+#exploreritems #folder .expanded i {
+    transform: rotate(-90deg);
 }

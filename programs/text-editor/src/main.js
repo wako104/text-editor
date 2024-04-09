@@ -43,7 +43,7 @@ ipcMain.on("new-file", (_event, _arg) => {
           console.log("error");
           return;
         }
-        win.webContents.send("file", { filepath: path.parse(filePath) });
+        win.webContents.send("file", { filepath: path.parse(filePath) }); //-------------------- FIX
       });
     });
 });
@@ -172,7 +172,7 @@ const getFolderContents = (folderPath, depth = 1) => {
 };
 
 const saveFile = () => {
-  window.ipc.send("get-save");
+  win.webContents.send("get-save");
 };
 
 // save file
@@ -197,7 +197,7 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
 });
 
 // save as button
-ipcMain.on("save-as-file", (_event, fileContent) => {
+ipcMain.on("save-file-as", (_event, fileContent) => {
   saveAs(fileContent);
 });
 
@@ -270,6 +270,7 @@ const menu = [
       },
       {
         label: "Open Folder...",
+        accelerator: isMac ? "Cmd+O" : "Ctrl+O",
         click: () => {
           openFolder();
         },
@@ -278,7 +279,15 @@ const menu = [
         type: "separator",
       },
       {
-        label: "Save As",
+        label: "Save",
+        accelerator: isMac ? "Cmd+S" : "Ctrl+S",
+        click: () => {
+          saveFile();
+        },
+      },
+      {
+        label: "Save-As",
+        accelerator: isMac ? "Cmd+Shift+S" : "Ctrl+Shift+S",
       },
     ],
   },

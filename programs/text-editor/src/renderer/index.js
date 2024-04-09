@@ -24,9 +24,14 @@ window.onload = () => {
     addFolderEventListeners();
   });
 
-  window.ipc.onGetFile((_event, _arg) => {
+  window.ipc.onGetSave((_event, _arg) => {
     content = el.fileTextarea.value;
     window.ipc.saveFile(filePathActive, content);
+  });
+
+  window.ipc.onGetSaveAs((_event, _arg) => {
+    content = el.fileTextarea.value;
+    window.ipc.saveFileAs(content);
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
@@ -144,11 +149,17 @@ const addFolder = (folder, parent = el.explorer) => {
   let contents = folder.data;
 
   let folderItem = document.createElement("li");
-  folderItem.setAttribute("data-type", "folder");
+  folderItem.setAttribute("id", "folder");
 
   // set up folder link
   let folderLink = document.createElement("button");
-  folderLink.textContent = folderPath.base;
+  // add arrow icon
+  let icon = document.createElement("i");
+  icon.classList.add("bx", "bxs-chevron-down");
+  let buttonText = document.createTextNode(folderPath.base);
+  folderLink.appendChild(icon);
+  folderLink.appendChild(buttonText);
+  // folderLink.textContent = folderPath.base;
 
   console.log("link: ", folderLink);
   console.log("item: ", folderItem);
@@ -175,7 +186,7 @@ const addFolder = (folder, parent = el.explorer) => {
 
 // adds event listener - hide files - to all folders
 const addFolderEventListeners = () => {
-  const folderElements = document.querySelectorAll("[data-type='folder']");
+  const folderElements = document.querySelectorAll("[id='folder']");
   console.log(folderElements);
 
   let root = folderElements[0];
@@ -186,7 +197,8 @@ const addFolderEventListeners = () => {
       sibling.style.display = sibling.style.display == "none" ? "block" : "none";
       sibling = sibling.nextElementSibling;
     }
-    console.log(target.nextElementSibling);
+
+    target.classList.toggle("expanded");
   });
 };
 
@@ -209,6 +221,7 @@ const addTab = (filePath) => {
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
   });
+  closeButton.setAttribute("class", "tabbutton");
 
   // set up close button
   closeButton.textContent = "X";
@@ -216,6 +229,7 @@ const addTab = (filePath) => {
     e.stopPropagation();
     closeTab(tabItem, filePath);
   });
+  closeButton.setAttribute("class", "closebutton");
 
   // append tab and close button to tab item
   tabItem.appendChild(tabLink);
@@ -232,6 +246,7 @@ const addTab = (filePath) => {
 };
 
 const closeTab = (tabItem, filePath) => {
+  // -------------------------------------------------------------------------- CHECK IF USER WANTS TO SAVE IF CHANGES HAVE BEEN MADE
   // remove tab item
   tabItem.remove();
 

@@ -6,8 +6,10 @@ module.exports = IPC = {
   onFolderReady: (callback) => ipcRenderer.on("folder", callback),
   openFolder: () => ipcRenderer.send("open-folder"),
   newFile: () => ipcRenderer.send("new-file"),
+  onGetSave: (callback) => ipcRenderer.on("get-save", callback),
   saveFile: (filePath, fileContent) => ipcRenderer.send("save-file", filePath, fileContent),
-  onGetFile: (callback) => ipcRenderer.on("get-file", callback),
+  onGetSaveAs: (callback) => ipcRenderer.on("get-save-as", callback),
+  saveFileAs: (fileContent) => ipcRenderer.send("save-file-as", fileContent),
 };
 
 contextBridge.exposeInMainWorld("ipc", IPC);
