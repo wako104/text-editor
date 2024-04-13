@@ -6,6 +6,7 @@
   "scripts": {
     "start": "electron .",
     "dev": "cross-env NODE_ENV=development electron . --inspect=5858",
+    "build": "webpack",
     "reload": "rs && electron .",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -25,6 +26,7 @@
     "electron-reloader": "^1.2.3"
   },
   "dependencies": {
-    "bulma": "^0.9.4"
+    "bulma": "^0.9.4",
+    "codemirror": "^6.0.1"
   }
 }
