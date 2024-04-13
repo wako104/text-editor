@@ -4,6 +4,11 @@ const fs = require("fs-extra");
 const { error } = require("console");
 let win;
 
+// all currently opened items (folders and files)
+let openItems = [];
+// has a folder been opened? - treat folder like a workspace
+let isFolder = false;
+
 const isMac = process.platform === "darwin";
 
 if (process.env.NODE_ENV === "development") {
@@ -76,12 +81,11 @@ const openFile = () => {
         if (err) throw err;
         console.log("readfile: ", data);
 
-        let filePathObj = path.parse(filePath);
+        let filePathObj = parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
           path: filePathObj,
           data: data,
-          depth: 0,
         });
       });
     })
@@ -109,29 +113,40 @@ function openFolder() {
       const folderPath = result.filePaths[0];
       console.log("folder selected: ", folderPath);
 
-      // create new window --------------------------------- IF CURRENT WINDOW NOT EMPTY
-      createWindow();
-
-      // make sure window is loaded before sending data
-      win.webContents.on("did-finish-load", () => {
-        contents = getFolderContents(folderPath);
-
-        let folderPathObj = path.parse(folderPath);
-        folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
-
-        win.webContents.send("folder", {
-          path: folderPathObj,
-          data: contents,
-          depth: 0,
+      // create new window if current window is not empty
+      if (openItems.length > 0) {
+        createWindow();
+        win.webContents.on("did-finish-load", () => {
+          sendFolderContents(folderPath);
         });
-      });
+      } else {
+        sendFolderContents(folderPath);
+      }
     })
     .catch((err) => {
       console.error(err);
     });
 }
 
-const getFolderContents = (folderPath, depth = 1) => {
+const sendFolderContents = (folderPath) => {
+  contents = getFolderContents(folderPath);
+
+  let folderPathObj = path.parse(folderPath);
+  folderPathObj["fullpath"] = folderPathObj.dir + "/" + folderPathObj.base;
+
+  contents = getFolderContents(folderPath);
+  let folderContents = {
+    path: folderPathObj,
+    data: contents,
+  };
+
+  openItems.push(folderContents);
+  isFolder = true;
+
+  win.webContents.send("folder", folderContents);
+};
+
+const getFolderContents = (folderPath) => {
   let contents = [];
 
   const files = fs.readdirSync(folderPath);
@@ -150,21 +165,20 @@ const getFolderContents = (folderPath, depth = 1) => {
     // if the file is a directory
     if (stats.isDirectory()) {
       // use recursion for contents inside subfolder
-      const subFolderContents = getFolderContents(fullPath, depth + 1);
+      const subFolderContents = getFolderContents(fullPath);
 
       // push folder to contents
       contents.push({
         type: "folder",
         path: filePathObj,
         data: subFolderContents,
-        depth,
       });
     } else {
       // get file contents
       const data = fs.readFileSync(fullPath, "utf-8");
 
       // push file to contents
-      contents.push({ type: "file", path: filePathObj, data, depth });
+      contents.push({ type: "file", path: filePathObj, data });
     }
   });
 
@@ -218,7 +232,6 @@ const saveAs = (fileContent) => {
         win.webContents.send("file", {
           filepath: filePathObj,
           data: fileContent,
-          depth: 0,
         });
       });
     });

@@ -157,13 +157,9 @@ const addFolder = (folder, parent = el.explorer) => {
   let icon = document.createElement("i");
   icon.classList.add("bx", "bxs-chevron-down");
   let buttonText = document.createTextNode(folderPath.base);
+
   folderLink.appendChild(icon);
   folderLink.appendChild(buttonText);
-  // folderLink.textContent = folderPath.base;
-
-  console.log("link: ", folderLink);
-  console.log("item: ", folderItem);
-  console.log(parent);
 
   // add link to folder item
   folderItem.appendChild(folderLink);
@@ -191,6 +187,7 @@ const addFolderEventListeners = () => {
 
   let root = folderElements[0];
   root.addEventListener("click", ({ target }) => {
+    console.log(target);
     let sibling = target.nextElementSibling;
 
     while (sibling) {
@@ -221,7 +218,7 @@ const addTab = (filePath) => {
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
   });
-  closeButton.setAttribute("class", "tabbutton");
+  tabButton.setAttribute("class", "tabbutton");
 
   // set up close button
   closeButton.textContent = "X";
