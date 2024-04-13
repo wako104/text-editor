@@ -1,6 +1,7 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
+const cm = require("codemirror");
 const { error } = require("console");
 let win;
 
@@ -20,6 +21,8 @@ function createWindow() {
   win = new BrowserWindow({
     width: 800,
     height: 600,
+    minWidth: 600,
+    minHeight: 400,
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: true,
@@ -236,6 +239,10 @@ const saveAs = (fileContent) => {
       });
     });
 };
+
+//-------------------------------------------------------------------------------------------------
+// CodeMirror
+//-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
 // App is ready
