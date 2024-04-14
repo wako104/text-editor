@@ -1,7 +1,6 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
-const cm = require("codemirror");
 const { error } = require("console");
 let win;
 
@@ -25,7 +24,6 @@ function createWindow() {
     minHeight: 400,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -35,7 +33,7 @@ function createWindow() {
 }
 
 //-------------------------------------------------------------------------------------------------
-// ipc processes
+// Functions
 //-------------------------------------------------------------------------------------------------
 
 // save file in file explorer
@@ -51,14 +49,11 @@ ipcMain.on("new-file", (_event, _arg) => {
           console.log("error");
           return;
         }
-        win.webContents.send("file", { filepath: path.parse(filePath) }); //-------------------- FIX
+        let filePathObj = path.parse(filePath);
+        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
+        win.webContents.send("file", { path: filePathObj });
       });
     });
-});
-
-//open file from explorer
-ipcMain.on("open-file", (_event, _arg) => {
-  openFile();
 });
 
 const openFile = () => {
@@ -84,7 +79,7 @@ const openFile = () => {
         if (err) throw err;
         console.log("readfile: ", data);
 
-        let filePathObj = parse(filePath);
+        let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
           path: filePathObj,
@@ -96,11 +91,6 @@ const openFile = () => {
       console.error(err);
     });
 };
-
-// open folder from explorer
-ipcMain.on("open-folder", (_event, _arg) => {
-  openFolder();
-});
 
 function openFolder() {
   dialog
@@ -193,7 +183,9 @@ const saveFile = () => {
 };
 
 // save file
-ipcMain.on("save-file", (_event, filePath, fileContent) => {
+ipcMain.on("save-file", (_event, data) => {
+  filePath = data.filePathActive;
+  fileContent = data.content;
   let path = filePath.fullpath;
   console.log(path);
   if (fs.existsSync(path)) {
@@ -214,8 +206,8 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
 });
 
 // save as button
-ipcMain.on("save-file-as", (_event, fileContent) => {
-  saveAs(fileContent);
+ipcMain.on("save-file-as", (_event, data) => {
+  saveAs(data);
 });
 
 // save as function
@@ -239,10 +231,6 @@ const saveAs = (fileContent) => {
       });
     });
 };
-
-//-------------------------------------------------------------------------------------------------
-// CodeMirror
-//-------------------------------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------------------------------
 // App is ready

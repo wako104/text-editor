@@ -6,45 +6,29 @@ let el;
 window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
-    saveDocumentBtn: document.getElementById("savefile"),
-    closeDocumentBtn: document.getElementById("closefile"),
     fileTextarea: document.getElementById("maintext"),
     folderList: document.getElementById("folderlist"),
     explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
   };
 
-  window.ipc.onFileReady((_event, value) => {
-    handleOpenFile(value);
+  window.ipc.receive("file", (data) => {
+    handleOpenFile(data);
   });
 
-  window.ipc.onFolderReady((_event, value) => {
-    console.log(value);
-    addFolder(value);
+  window.ipc.receive("folder", (data) => {
+    console.log(data);
+    addFolder(data);
     addFolderEventListeners();
   });
 
-  window.ipc.onGetSave((_event, _arg) => {
+  window.ipc.receive("get-save", (_data) => {
     content = el.fileTextarea.value;
-    window.ipc.saveFile(filePathActive, content);
-  });
-
-  window.ipc.onGetSaveAs((_event, _arg) => {
-    content = el.fileTextarea.value;
-    window.ipc.saveFileAs(content);
+    window.ipc.send("save-file", { filePathActive, content });
   });
 
   el.newDocumentBtn.addEventListener("click", () => {
-    window.ipc.newFile();
-  });
-
-  el.saveDocumentBtn.addEventListener("click", () => {
-    content = el.fileTextarea.value;
-    window.ipc.saveFile(filePathActive, content);
-  });
-
-  el.closeDocumentBtn.addEventListener("click", () => {
-    removeFileFromList(filePathActive);
+    window.ipc.send("new-file");
   });
 };
 
@@ -218,7 +202,7 @@ const addTab = (filePath) => {
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
   });
-  tabButton.setAttribute("class", "tabbutton");
+  tabLink.setAttribute("class", "tabbutton");
 
   // set up close button
   closeButton.textContent = "X";
