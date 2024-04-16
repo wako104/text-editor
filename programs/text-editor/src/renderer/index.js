@@ -3,16 +3,20 @@ requirejs.config({ paths: { vs: "../node_modules/monaco-editor/min/vs" } });
 let fileDataList = [];
 let filePathActive = null;
 let openTabs = [];
+// hold initial content of each file to check if changes have been made
+let initialContentMap = {};
 let el;
 let editor;
 
 window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
-    fileTextarea: document.getElementById("maintext"),
+    mainText: document.getElementById("maintext"),
     folderList: document.getElementById("folderlist"),
     explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
+    landingPage: document.getElementById("landingpage"),
+    editorArea: document.getElementById("editor"),
   };
 
   window.ipc.receive("file", (data) => {
@@ -26,7 +30,8 @@ window.onload = () => {
   });
 
   window.ipc.receive("get-save", (_data) => {
-    content = el.fileTextarea.value;
+    // ----INCORRECT
+    content = el.mainText.value;
     window.ipc.send("save-file", { filePathActive, content });
   });
 
@@ -45,6 +50,12 @@ window.onload = () => {
 //-------------------------------------------------------------------------------------------------
 // Editor
 //-------------------------------------------------------------------------------------------------
+
+const toggleLandingPage = () => {
+  // not working work out why
+  el.editorArea.style.display = el.editorArea.style.display == "flex" ? "none" : "flex";
+  el.landingPage.style.display = el.landingPage.style.display == "none" ? "flex" : "none";
+};
 
 const createModelForFile = (file) => {
   // retrieve file extension
@@ -84,6 +95,7 @@ const handleOpenFile = (file, parent = el.explorer) => {
   if (!fileInList(file.path)) {
     fileDataList.push(file);
     addFileToList(file, parent);
+    initialContentMap[file.path.fullpath] = file.data;
   } else {
     // if the file is already open in the explorer
     //----------------------------------------------- ASK USER - ARE YOU SURE?
@@ -132,16 +144,7 @@ const removeFileFromList = (filePath) => {
 const displayFile = (filePath) => {
   const uri = monaco.Uri.parse(filePath.fullpath);
   const model = monaco.editor.getModel(uri);
-  let currentFile = null;
-
-  fileDataList.forEach((value) => {
-    if (value.path.fullpath === filePath.fullpath) {
-      currentFile = value;
-      return;
-    }
-  });
   editor.setModel(model);
-  // el.fileTextarea.value = currentFile.data;
   filePathActive = filePath;
 };
 
@@ -236,6 +239,10 @@ const addFolderEventListeners = () => {
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (file) => {
+  if (openTabs.length == 0) {
+    toggleLandingPage();
+  }
+
   const filePath = file.path;
 
   if (isTabOpen(filePath)) {
@@ -258,7 +265,7 @@ const addTab = (file) => {
   closeButton.textContent = "X";
   closeButton.addEventListener("click", (e) => {
     e.stopPropagation();
-    closeTab(tabItem, filePath);
+    handleCloseTab(tabItem, filePath);
   });
   closeButton.setAttribute("class", "closebutton");
 
@@ -277,8 +284,26 @@ const addTab = (file) => {
   displayFile(filePath);
 };
 
+const handleCloseTab = (tabItem, filePath) => {
+  const modelUri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(modelUri);
+  if (!model) return;
+
+  const currentContent = model.getValue();
+  const initialContent = initialContentMap[filePath.fullpath];
+
+  // check user want to close without saving
+  if (currentContent !== initialContent) {
+    const confirmation = window.confirm("Close tab without saving?");
+    if (confirmation) {
+      closeTab(tabItem, filePath);
+    }
+  } else {
+    closeTab(tabItem, filePath);
+  }
+};
+
 const closeTab = (tabItem, filePath) => {
-  // -------------------------------------------------------------------------- CHECK IF USER WANTS TO SAVE IF CHANGES HAVE BEEN MADE
   // remove tab item
   tabItem.remove();
 
@@ -295,6 +320,7 @@ const closeTab = (tabItem, filePath) => {
   // if no other tabs, display nothing
   if (openTabs.length == 0) {
     filePathActive = null;
+    toggleLandingPage();
     return;
   }
 
