@@ -20,12 +20,16 @@
   },
   "homepage": "https://github.com/wako104/text-editor#readme",
   "devDependencies": {
+    "bulma": "^0.9.4",
     "cross-env": "^7.0.3",
     "electron": "^27.0.0",
-    "electron-reloader": "^1.2.3"
+    "electron-reloader": "^1.2.3",
+    "monaco-editor": "^0.47.0",
+    "webpack": "^5.91.0",
+    "webpack-cli": "^5.1.4"
   },
   "dependencies": {
-    "bulma": "^0.9.4",
-    "monaco-editor": "^0.47.0"
+    "codemirror": "^6.0.1",
+    "requirejs": "^2.3.6"
   }
 }

@@ -1,5 +1,4 @@
 const { ipcRenderer, contextBridge } = require("electron");
-const { amdLoader } = require("monaco-editor");
 
 contextBridge.exposeInMainWorld("ipc", {
   send: (channel, data) => {
@@ -11,7 +10,7 @@ contextBridge.exposeInMainWorld("ipc", {
   receive: (channel, value) => {
     let validChannels = ["file", "folder", "get-save"];
     if (validChannels.includes(channel)) {
-      ipcRenderer.on(channel, (event, ...args) => value(...args));
+      ipcRenderer.on(channel, (_event, ...args) => value(...args));
     }
   },
 });

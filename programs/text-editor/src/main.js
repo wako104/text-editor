@@ -1,7 +1,11 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
+const requirejs = require("requirejs");
 const { error } = require("console");
+
+const codemirror = require("codemirror");
+
 let win;
 
 // all currently opened items (folders and files)
@@ -83,7 +87,7 @@ const openFile = () => {
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
           path: filePathObj,
-          data: data,
+          data,
         });
       });
     })
@@ -231,6 +235,20 @@ const saveAs = (fileContent) => {
       });
     });
 };
+
+//-------------------------------------------------------------------------------------------------
+// CodeMirror
+//-------------------------------------------------------------------------------------------------
+
+// const createEditor = (language, fileContent) => {
+//   var editor = codemirror(document.getElementById("maintext"), {
+//     mode: language,
+//     lineNumbers: true,
+//     value: fileContent,
+//   });
+
+//   return editor;
+// };
 
 //-------------------------------------------------------------------------------------------------
 // App is ready

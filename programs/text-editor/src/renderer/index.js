@@ -1,7 +1,10 @@
+requirejs.config({ paths: { vs: "../node_modules/monaco-editor/min/vs" } });
+
 let fileDataList = [];
 let filePathActive = null;
 let openTabs = [];
 let el;
+let editor;
 
 window.onload = () => {
   el = {
@@ -30,6 +33,29 @@ window.onload = () => {
   el.newDocumentBtn.addEventListener("click", () => {
     window.ipc.send("new-file");
   });
+
+  requirejs(["vs/editor/editor.main"], function () {
+    editor = monaco.editor.create(document.getElementById("maintext"), {
+      value: "",
+      language: "javascript",
+    });
+  });
+};
+
+//-------------------------------------------------------------------------------------------------
+// Editor
+//-------------------------------------------------------------------------------------------------
+
+const createModelForFile = (file) => {
+  monaco.editor.createModel(file.data, "javascript", monaco.Uri.parse(file.path.fullpath));
+};
+
+const disposeModel = (filePath) => {
+  const uri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(uri);
+  if (model) {
+    model.dispose();
+  }
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -60,7 +86,7 @@ const addFileToList = (file, parent) => {
 
   // add event listener - add tab - to file
   fileLink.addEventListener("click", () => {
-    addTab(filePath);
+    addTab(file);
   });
 
   // add link to file item
@@ -86,14 +112,18 @@ const removeFileFromList = (filePath) => {
 };
 
 const displayFile = (filePath) => {
+  const uri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(uri);
   let currentFile = null;
+
   fileDataList.forEach((value) => {
     if (value.path.fullpath === filePath.fullpath) {
       currentFile = value;
       return;
     }
   });
-  el.fileTextarea.value = currentFile.data;
+  editor.setModel(model);
+  // el.fileTextarea.value = currentFile.data;
   filePathActive = filePath;
 };
 
@@ -187,7 +217,9 @@ const addFolderEventListeners = () => {
 // Tab Management
 //-------------------------------------------------------------------------------------------------
 
-const addTab = (filePath) => {
+const addTab = (file) => {
+  const filePath = file.path;
+
   if (isTabOpen(filePath)) {
     displayFile(filePath);
     return;
@@ -222,6 +254,7 @@ const addTab = (filePath) => {
   // add tab to openTabs list
   openTabs.push(filePath);
 
+  createModelForFile(file);
   // display file
   displayFile(filePath);
 };
@@ -230,6 +263,9 @@ const closeTab = (tabItem, filePath) => {
   // -------------------------------------------------------------------------- CHECK IF USER WANTS TO SAVE IF CHANGES HAVE BEEN MADE
   // remove tab item
   tabItem.remove();
+
+  // dispose editor model
+  disposeModel(filePath);
 
   // remove from openTabs list
   openTabs.forEach((tab, index) => {
@@ -241,7 +277,6 @@ const closeTab = (tabItem, filePath) => {
   // if no other tabs, display nothing
   if (openTabs.length == 0) {
     filePathActive = null;
-    el.fileTextarea.value = "";
     return;
   }
 
