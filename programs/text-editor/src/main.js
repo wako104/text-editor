@@ -1,10 +1,7 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
-const requirejs = require("requirejs");
 const { error } = require("console");
-
-const codemirror = require("codemirror");
 
 let win;
 
@@ -44,7 +41,7 @@ function createWindow() {
 ipcMain.on("new-file", (_event, _arg) => {
   dialog
     .showSaveDialog(win, {
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
       console.log("file path: ", filePath);
@@ -64,7 +61,7 @@ const openFile = () => {
   dialog
     .showOpenDialog(win, {
       properties: ["openFile"],
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then((result) => {
       if (result.canceled) {
@@ -218,7 +215,7 @@ ipcMain.on("save-file-as", (_event, data) => {
 const saveAs = (fileContent) => {
   dialog
     .showSaveDialog(win, {
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
       fs.writeFile(filePath, fileContent, (error) => {
@@ -235,20 +232,6 @@ const saveAs = (fileContent) => {
       });
     });
 };
-
-//-------------------------------------------------------------------------------------------------
-// CodeMirror
-//-------------------------------------------------------------------------------------------------
-
-// const createEditor = (language, fileContent) => {
-//   var editor = codemirror(document.getElementById("maintext"), {
-//     mode: language,
-//     lineNumbers: true,
-//     value: fileContent,
-//   });
-
-//   return editor;
-// };
 
 //-------------------------------------------------------------------------------------------------
 // App is ready

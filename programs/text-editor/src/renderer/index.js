@@ -34,10 +34,10 @@ window.onload = () => {
     window.ipc.send("new-file");
   });
 
-  requirejs(["vs/editor/editor.main"], function () {
+  require(["vs/editor/editor.main"], () => {
     editor = monaco.editor.create(document.getElementById("maintext"), {
       value: "",
-      language: "javascript",
+      language: undefined,
     });
   });
 };
@@ -47,7 +47,25 @@ window.onload = () => {
 //-------------------------------------------------------------------------------------------------
 
 const createModelForFile = (file) => {
-  monaco.editor.createModel(file.data, "javascript", monaco.Uri.parse(file.path.fullpath));
+  // retrieve file extension
+  const filePath = file.path;
+  const extension = filePath.fullpath.split(".").pop();
+  const language = getLanguageId(extension);
+  monaco.editor.createModel(file.data, language, monaco.Uri.parse(file.path.fullpath));
+};
+
+const getLanguageId = (extension) => {
+  const languages = monaco.languages.getLanguages();
+  console.log(languages);
+  let languageId = null;
+
+  languages.forEach((language) => {
+    if (language.extensions && language.extensions.includes("." + extension)) {
+      languageId = language.id;
+    }
+  });
+
+  return languageId;
 };
 
 const disposeModel = (filePath) => {
