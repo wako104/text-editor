@@ -15,7 +15,6 @@ window.onload = () => {
     folderList: document.getElementById("folderlist"),
     explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
-    landingPage: document.getElementById("landingpage"),
     editorArea: document.getElementById("editor"),
   };
 
@@ -35,12 +34,8 @@ window.onload = () => {
     window.ipc.send("save-file", { filePathActive, content });
   });
 
-  el.newDocumentBtn.addEventListener("click", () => {
-    window.ipc.send("new-file");
-  });
-
   require(["vs/editor/editor.main"], () => {
-    editor = monaco.editor.create(document.getElementById("maintext"), {
+    editor = monaco.editor.create(el.mainText, {
       value: "",
       language: undefined,
     });
@@ -50,12 +45,6 @@ window.onload = () => {
 //-------------------------------------------------------------------------------------------------
 // Editor
 //-------------------------------------------------------------------------------------------------
-
-const toggleLandingPage = () => {
-  // not working work out why
-  el.editorArea.style.display = el.editorArea.style.display == "flex" ? "none" : "flex";
-  el.landingPage.style.display = el.landingPage.style.display == "none" ? "flex" : "none";
-};
 
 const createModelForFile = (file) => {
   // retrieve file extension
@@ -239,9 +228,6 @@ const addFolderEventListeners = () => {
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (file) => {
-  if (openTabs.length == 0) {
-    toggleLandingPage();
-  }
 
   const filePath = file.path;
 
@@ -320,7 +306,6 @@ const closeTab = (tabItem, filePath) => {
   // if no other tabs, display nothing
   if (openTabs.length == 0) {
     filePathActive = null;
-    toggleLandingPage();
     return;
   }
 
