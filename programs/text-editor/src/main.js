@@ -1,7 +1,9 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
-const { error } = require("console");
+const os = require("os");
+// const pty = require("node-pty");
+const term = require("@xterm/xterm");
 
 let win;
 
@@ -19,9 +21,9 @@ if (process.env.NODE_ENV === "development") {
 // create main window
 function createWindow() {
   win = new BrowserWindow({
-    width: 800,
+    width: 925,
     height: 600,
-    minWidth: 600,
+    minWidth: 925,
     minHeight: 400,
     webPreferences: {
       nodeIntegration: true,
@@ -233,6 +235,10 @@ const saveAs = (fileContent) => {
     });
 };
 
+const newTerminal = () => {
+  win.webContents.send("open-terminal");
+};
+
 //-------------------------------------------------------------------------------------------------
 // App is ready
 //-------------------------------------------------------------------------------------------------
@@ -305,6 +311,17 @@ const menu = [
   },
   {
     role: "viewMenu",
+  },
+  {
+    label: "Terminal",
+    submenu: [
+      {
+        label: "New Terminal",
+        click: () => {
+          newTerminal();
+        },
+      },
+    ],
   },
   {
     role: "windowMenu",

@@ -8,7 +8,7 @@ contextBridge.exposeInMainWorld("ipc", {
     }
   },
   receive: (channel, value) => {
-    let validChannels = ["file", "folder", "get-save"];
+    let validChannels = ["file", "folder", "get-save", "open-terminal"];
     if (validChannels.includes(channel)) {
       ipcRenderer.on(channel, (_event, ...args) => value(...args));
     }

@@ -1,4 +1,9 @@
-requirejs.config({ paths: { vs: "../node_modules/monaco-editor/min/vs" } });
+requirejs.config({
+  paths: {
+    vs: "../node_modules/monaco-editor/min/vs",
+    xterm: "../node_modules/xterm/lib/xterm",
+  },
+});
 
 let fileDataList = [];
 let filePathActive = null;
@@ -7,15 +12,17 @@ let openTabs = [];
 let initialContentMap = {};
 let el;
 let editor;
+let term;
 
 window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
-    mainText: document.getElementById("maintext"),
     folderList: document.getElementById("folderlist"),
     explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
-    editorArea: document.getElementById("editor"),
+    editorArea: document.getElementById("editorarea"),
+    editor: document.getElementById("editor"),
+    terminal: document.getElementById("terminal"),
   };
 
   window.ipc.receive("file", (data) => {
@@ -30,14 +37,30 @@ window.onload = () => {
 
   window.ipc.receive("get-save", (_data) => {
     // ----INCORRECT
-    content = el.mainText.value;
+    content = el.editor.value;
     window.ipc.send("save-file", { filePathActive, content });
   });
 
   require(["vs/editor/editor.main"], () => {
-    editor = monaco.editor.create(el.mainText, {
+    editor = monaco.editor.create(el.editor, {
       value: "",
       language: undefined,
+    });
+  });
+
+  window.onresize = () => {
+    editor.layout();
+  };
+
+  window.ipc.receive("open-terminal", (_data) => {
+    console.log("received");
+    require(["xterm"], (xterm) => {
+      term = new xterm.Terminal();
+      term.open(el.terminal);
+      term.write("Hello World!");
+      term.onData((e) => {
+        term.write(e);
+      });
     });
   });
 };
@@ -228,7 +251,6 @@ const addFolderEventListeners = () => {
 //-------------------------------------------------------------------------------------------------
 
 const addTab = (file) => {
-
   const filePath = file.path;
 
   if (isTabOpen(filePath)) {
