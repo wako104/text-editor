@@ -2,17 +2,16 @@ const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
 const os = require("os");
-// const pty = require("node-pty");
-const term = require("@xterm/xterm");
+const pty = require("node-pty");
+const { spawn } = require("child_process");
 
 let win;
-
 // all currently opened items (folders and files)
 let openItems = [];
 // has a folder been opened? - treat folder like a workspace
 let isFolder = false;
-
 const isMac = process.platform === "darwin";
+var shell = os.platform() === "win32" ? "powershell.exe" : "zsh";
 
 if (process.env.NODE_ENV === "development") {
   require("electron-reloader")(module);
@@ -36,7 +35,7 @@ function createWindow() {
 }
 
 //-------------------------------------------------------------------------------------------------
-// Functions
+// File functions
 //-------------------------------------------------------------------------------------------------
 
 // save file in file explorer
@@ -94,6 +93,64 @@ const openFile = () => {
       console.error(err);
     });
 };
+
+const saveFile = () => {
+  win.webContents.send("get-save");
+};
+
+// save file
+ipcMain.on("save-file", (_event, data) => {
+  filePath = data.filePathActive;
+  fileContent = data.content;
+  let path = filePath.fullpath;
+  console.log(path);
+  if (fs.existsSync(path)) {
+    // if file exists, save to file
+    fs.writeFile(path, fileContent, (error) => {
+      if (error) {
+        console.err("couldn't save file");
+      }
+    });
+    win.webContents.send("file", {
+      path: filePath,
+      data: fileContent,
+    });
+  } else {
+    // if file doesn't exist, open dialog to save as new file
+    saveAs(fileContent);
+  }
+});
+
+// save as button
+ipcMain.on("save-file-as", (_event, data) => {
+  saveAs(data);
+});
+
+// save as function
+const saveAs = (fileContent) => {
+  dialog
+    .showSaveDialog(win, {
+      filters: [{ name: "All Files", extensions: ["*"] }],
+    })
+    .then(({ filePath }) => {
+      fs.writeFile(filePath, fileContent, (error) => {
+        if (error) {
+          console.log("error");
+          return;
+        }
+        let filePathObj = path.parse(filePath);
+        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
+        win.webContents.send("file", {
+          filepath: filePathObj,
+          data: fileContent,
+        });
+      });
+    });
+};
+
+//-------------------------------------------------------------------------------------------------
+// Folder functions
+//-------------------------------------------------------------------------------------------------
 
 function openFolder() {
   dialog
@@ -181,62 +238,32 @@ const getFolderContents = (folderPath) => {
   return contents;
 };
 
-const saveFile = () => {
-  win.webContents.send("get-save");
-};
-
-// save file
-ipcMain.on("save-file", (_event, data) => {
-  filePath = data.filePathActive;
-  fileContent = data.content;
-  let path = filePath.fullpath;
-  console.log(path);
-  if (fs.existsSync(path)) {
-    // if file exists, save to file
-    fs.writeFile(path, fileContent, (error) => {
-      if (error) {
-        console.err("couldn't save file");
-      }
-    });
-    win.webContents.send("file", {
-      path: filePath,
-      data: fileContent,
-    });
-  } else {
-    // if file doesn't exist, open dialog to save as new file
-    saveAs(fileContent);
-  }
-});
-
-// save as button
-ipcMain.on("save-file-as", (_event, data) => {
-  saveAs(data);
-});
-
-// save as function
-const saveAs = (fileContent) => {
-  dialog
-    .showSaveDialog(win, {
-      filters: [{ name: "All Files", extensions: ["*"] }],
-    })
-    .then(({ filePath }) => {
-      fs.writeFile(filePath, fileContent, (error) => {
-        if (error) {
-          console.log("error");
-          return;
-        }
-        let filePathObj = path.parse(filePath);
-        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
-        win.webContents.send("file", {
-          filepath: filePathObj,
-          data: fileContent,
-        });
-      });
-    });
-};
+//-------------------------------------------------------------------------------------------------
+// Terminal functions
+//-------------------------------------------------------------------------------------------------
 
 const newTerminal = () => {
   win.webContents.send("open-terminal");
+
+  let ptyProcess = pty.spawn(shell, [], {
+    name: "xterm-color",
+    cols: 80,
+    rows: 24,
+    cwd: process.env.HOME,
+    env: process.env,
+  });
+
+  ipcMain.on("terminal-data", (_event, data) => {
+    ptyProcess.write(data);
+  });
+
+  ptyProcess.on("data", (data) => {
+    win.webContents.send("terminal-output", data);
+  });
+};
+
+const closeTerminal = () => {
+  win.webContents.send("close-terminal");
 };
 
 //-------------------------------------------------------------------------------------------------

@@ -1,7 +1,8 @@
 requirejs.config({
   paths: {
     vs: "../node_modules/monaco-editor/min/vs",
-    xterm: "../node_modules/xterm/lib/xterm",
+    xterm: "../node_modules/@xterm/xterm/lib/xterm",
+    fit: "../node_modules/@xterm/addon-fit/lib/addon-fit",
   },
 });
 
@@ -30,7 +31,6 @@ window.onload = () => {
   });
 
   window.ipc.receive("folder", (data) => {
-    console.log(data);
     addFolder(data);
     addFolderEventListeners();
   });
@@ -39,6 +39,10 @@ window.onload = () => {
     // ----INCORRECT
     content = el.editor.value;
     window.ipc.send("save-file", { filePathActive, content });
+  });
+
+  window.ipc.receive("open-terminal", (_data) => {
+    openTerminal();
   });
 
   require(["vs/editor/editor.main"], () => {
@@ -50,19 +54,14 @@ window.onload = () => {
 
   window.onresize = () => {
     editor.layout();
+    const cols = Math.floor(
+      el.terminal.clientWidth / term._core._renderService.dimensions.actualCellWidth
+    );
+    const rows = Math.floor(
+      el.terminal.clientHeight / term._core._renderService.dimensions.actualCellHeight
+    );
+    term.resize(cols, rows);
   };
-
-  window.ipc.receive("open-terminal", (_data) => {
-    console.log("received");
-    require(["xterm"], (xterm) => {
-      term = new xterm.Terminal();
-      term.open(el.terminal);
-      term.write("Hello World!");
-      term.onData((e) => {
-        term.write(e);
-      });
-    });
-  });
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -98,6 +97,32 @@ const disposeModel = (filePath) => {
     model.dispose();
   }
 };
+
+//-------------------------------------------------------------------------------------------------
+// Terminal
+//-------------------------------------------------------------------------------------------------
+
+const openTerminal = () => {
+  require(["xterm", "fit"], (xterm, fit) => {
+    term = new xterm.Terminal();
+    term.options = {
+      fontSize: 12,
+    };
+
+    // the FitAddon resizes the terminal for its parent element
+    const fitAddon = new fit.FitAddon();
+    term.loadAddon(fitAddon);
+    term.open(el.terminal);
+    fitAddon.fit();
+    term.onData((data) => {
+      window.ipc.send("terminal-data", data);
+    });
+  });
+};
+
+window.ipc.receive("terminal-output", (data) => {
+  term.write(data);
+});
 
 //-------------------------------------------------------------------------------------------------
 // File Management
