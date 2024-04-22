@@ -1,7 +1,10 @@
 const { app, Menu, BrowserWindow, ipcMain, dialog } = require("electron");
 const path = require("path");
 const fs = require("fs-extra");
-const { error } = require("console");
+const os = require("os");
+// const pty = require("node-pty");
+const term = require("@xterm/xterm");
+
 let win;
 
 // all currently opened items (folders and files)
@@ -18,11 +21,12 @@ if (process.env.NODE_ENV === "development") {
 // create main window
 function createWindow() {
   win = new BrowserWindow({
-    width: 800,
+    width: 925,
     height: 600,
+    minWidth: 925,
+    minHeight: 400,
     webPreferences: {
       nodeIntegration: true,
-      contextIsolation: true,
       preload: path.join(__dirname, "preload.js"),
     },
   });
@@ -32,14 +36,14 @@ function createWindow() {
 }
 
 //-------------------------------------------------------------------------------------------------
-// ipc processes
+// Functions
 //-------------------------------------------------------------------------------------------------
 
 // save file in file explorer
 ipcMain.on("new-file", (_event, _arg) => {
   dialog
     .showSaveDialog(win, {
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
       console.log("file path: ", filePath);
@@ -48,21 +52,18 @@ ipcMain.on("new-file", (_event, _arg) => {
           console.log("error");
           return;
         }
-        win.webContents.send("file", { filepath: path.parse(filePath) }); //-------------------- FIX
+        let filePathObj = path.parse(filePath);
+        filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
+        win.webContents.send("file", { path: filePathObj });
       });
     });
-});
-
-//open file from explorer
-ipcMain.on("open-file", (_event, _arg) => {
-  openFile();
 });
 
 const openFile = () => {
   dialog
     .showOpenDialog(win, {
       properties: ["openFile"],
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then((result) => {
       if (result.canceled) {
@@ -81,11 +82,11 @@ const openFile = () => {
         if (err) throw err;
         console.log("readfile: ", data);
 
-        let filePathObj = parse(filePath);
+        let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
           path: filePathObj,
-          data: data,
+          data,
         });
       });
     })
@@ -93,11 +94,6 @@ const openFile = () => {
       console.error(err);
     });
 };
-
-// open folder from explorer
-ipcMain.on("open-folder", (_event, _arg) => {
-  openFolder();
-});
 
 function openFolder() {
   dialog
@@ -190,7 +186,9 @@ const saveFile = () => {
 };
 
 // save file
-ipcMain.on("save-file", (_event, filePath, fileContent) => {
+ipcMain.on("save-file", (_event, data) => {
+  filePath = data.filePathActive;
+  fileContent = data.content;
   let path = filePath.fullpath;
   console.log(path);
   if (fs.existsSync(path)) {
@@ -211,15 +209,15 @@ ipcMain.on("save-file", (_event, filePath, fileContent) => {
 });
 
 // save as button
-ipcMain.on("save-file-as", (_event, fileContent) => {
-  saveAs(fileContent);
+ipcMain.on("save-file-as", (_event, data) => {
+  saveAs(data);
 });
 
 // save as function
 const saveAs = (fileContent) => {
   dialog
     .showSaveDialog(win, {
-      filters: [{ name: "text files", extensions: ["txt"] }],
+      filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
       fs.writeFile(filePath, fileContent, (error) => {
@@ -235,6 +233,10 @@ const saveAs = (fileContent) => {
         });
       });
     });
+};
+
+const newTerminal = () => {
+  win.webContents.send("open-terminal");
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -309,6 +311,17 @@ const menu = [
   },
   {
     role: "viewMenu",
+  },
+  {
+    label: "Terminal",
+    submenu: [
+      {
+        label: "New Terminal",
+        click: () => {
+          newTerminal();
+        },
+      },
+    ],
   },
   {
     role: "windowMenu",

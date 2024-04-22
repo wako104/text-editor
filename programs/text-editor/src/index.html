@@ -5,7 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Text Editor</title>
     <link rel="stylesheet" href="./style.css">
-    <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <link rel="stylesheet" href="../node_modules/xterm/css/xterm.css">
+    <link rel="stylesheet" href="../node_modules/monaco-editor/min/vs/editor/editor.main.css">
+    <link rel="stylesheet" href="https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css">
 </head>
 <body>
     <div class="main">
@@ -15,9 +17,6 @@
                 <button id="newfile">
                     <i class="bx bxs-file-plus" style="color:#e4e4e4"></i>
                 </button>
-                <button id="savefile">Save</button>
-                <button id="saveasfile">Save As</button>
-                <button id="closefile">Close</button>
             </div>
             
             <!-- explorer -->
@@ -32,11 +31,15 @@
                     <!-- tabs will be dynamically added here -->
                 </ul>
             </div>
-            <div class="editor">
-                <textarea id="maintext" placeholder="Start typing here..."></textarea>
+            <div id="editorarea">
+                <div id="editor"></div>
+            </div>
+            <div id="terminalarea">
+                <div id="terminal"></div>
             </div>
         </div>
     </div>
-    <script src="./renderer/index.js"></script>
+    <script src="../node_modules/requirejs/require.js"></script>
+    <script type="module" src="./renderer/index.js"></script>
 </body>
 </html>

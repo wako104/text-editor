@@ -1,51 +1,102 @@
+requirejs.config({
+  paths: {
+    vs: "../node_modules/monaco-editor/min/vs",
+    xterm: "../node_modules/xterm/lib/xterm",
+  },
+});
+
 let fileDataList = [];
 let filePathActive = null;
 let openTabs = [];
+// hold initial content of each file to check if changes have been made
+let initialContentMap = {};
 let el;
+let editor;
+let term;
 
 window.onload = () => {
   el = {
     newDocumentBtn: document.getElementById("newfile"),
-    saveDocumentBtn: document.getElementById("savefile"),
-    closeDocumentBtn: document.getElementById("closefile"),
-    fileTextarea: document.getElementById("maintext"),
     folderList: document.getElementById("folderlist"),
     explorer: document.getElementById("exploreritems"),
     tabList: document.getElementById("tablist"),
+    editorArea: document.getElementById("editorarea"),
+    editor: document.getElementById("editor"),
+    terminal: document.getElementById("terminal"),
   };
 
-  window.ipc.onFileReady((_event, value) => {
-    handleOpenFile(value);
+  window.ipc.receive("file", (data) => {
+    handleOpenFile(data);
   });
 
-  window.ipc.onFolderReady((_event, value) => {
-    console.log(value);
-    addFolder(value);
+  window.ipc.receive("folder", (data) => {
+    console.log(data);
+    addFolder(data);
     addFolderEventListeners();
   });
 
-  window.ipc.onGetSave((_event, _arg) => {
-    content = el.fileTextarea.value;
-    window.ipc.saveFile(filePathActive, content);
+  window.ipc.receive("get-save", (_data) => {
+    // ----INCORRECT
+    content = el.editor.value;
+    window.ipc.send("save-file", { filePathActive, content });
   });
 
-  window.ipc.onGetSaveAs((_event, _arg) => {
-    content = el.fileTextarea.value;
-    window.ipc.saveFileAs(content);
+  require(["vs/editor/editor.main"], () => {
+    editor = monaco.editor.create(el.editor, {
+      value: "",
+      language: undefined,
+    });
   });
 
-  el.newDocumentBtn.addEventListener("click", () => {
-    window.ipc.newFile();
+  window.onresize = () => {
+    editor.layout();
+  };
+
+  window.ipc.receive("open-terminal", (_data) => {
+    console.log("received");
+    require(["xterm"], (xterm) => {
+      term = new xterm.Terminal();
+      term.open(el.terminal);
+      term.write("Hello World!");
+      term.onData((e) => {
+        term.write(e);
+      });
+    });
+  });
+};
+
+//-------------------------------------------------------------------------------------------------
+// Editor
+//-------------------------------------------------------------------------------------------------
+
+const createModelForFile = (file) => {
+  // retrieve file extension
+  const filePath = file.path;
+  const extension = filePath.fullpath.split(".").pop();
+  const language = getLanguageId(extension);
+  monaco.editor.createModel(file.data, language, monaco.Uri.parse(file.path.fullpath));
+};
+
+const getLanguageId = (extension) => {
+  const languages = monaco.languages.getLanguages();
+  console.log(languages);
+  let languageId = null;
+
+  languages.forEach((language) => {
+    if (language.extensions && language.extensions.includes("." + extension)) {
+      languageId = language.id;
+    }
   });
 
-  el.saveDocumentBtn.addEventListener("click", () => {
-    content = el.fileTextarea.value;
-    window.ipc.saveFile(filePathActive, content);
-  });
+  return languageId;
+};
 
-  el.closeDocumentBtn.addEventListener("click", () => {
-    removeFileFromList(filePathActive);
-  });
+const disposeModel = (filePath) => {
+  const uri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(uri);
+  if (model) {
+    model.dispose();
+  }
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -56,6 +107,7 @@ const handleOpenFile = (file, parent = el.explorer) => {
   if (!fileInList(file.path)) {
     fileDataList.push(file);
     addFileToList(file, parent);
+    initialContentMap[file.path.fullpath] = file.data;
   } else {
     // if the file is already open in the explorer
     //----------------------------------------------- ASK USER - ARE YOU SURE?
@@ -76,7 +128,7 @@ const addFileToList = (file, parent) => {
 
   // add event listener - add tab - to file
   fileLink.addEventListener("click", () => {
-    addTab(filePath);
+    addTab(file);
   });
 
   // add link to file item
@@ -102,14 +154,9 @@ const removeFileFromList = (filePath) => {
 };
 
 const displayFile = (filePath) => {
-  let currentFile = null;
-  fileDataList.forEach((value) => {
-    if (value.path.fullpath === filePath.fullpath) {
-      currentFile = value;
-      return;
-    }
-  });
-  el.fileTextarea.value = currentFile.data;
+  const uri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(uri);
+  editor.setModel(model);
   filePathActive = filePath;
 };
 
@@ -203,7 +250,9 @@ const addFolderEventListeners = () => {
 // Tab Management
 //-------------------------------------------------------------------------------------------------
 
-const addTab = (filePath) => {
+const addTab = (file) => {
+  const filePath = file.path;
+
   if (isTabOpen(filePath)) {
     displayFile(filePath);
     return;
@@ -218,13 +267,13 @@ const addTab = (filePath) => {
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
   });
-  tabButton.setAttribute("class", "tabbutton");
+  tabLink.setAttribute("class", "tabbutton");
 
   // set up close button
   closeButton.textContent = "X";
   closeButton.addEventListener("click", (e) => {
     e.stopPropagation();
-    closeTab(tabItem, filePath);
+    handleCloseTab(tabItem, filePath);
   });
   closeButton.setAttribute("class", "closebutton");
 
@@ -238,14 +287,36 @@ const addTab = (filePath) => {
   // add tab to openTabs list
   openTabs.push(filePath);
 
+  createModelForFile(file);
   // display file
   displayFile(filePath);
 };
 
+const handleCloseTab = (tabItem, filePath) => {
+  const modelUri = monaco.Uri.parse(filePath.fullpath);
+  const model = monaco.editor.getModel(modelUri);
+  if (!model) return;
+
+  const currentContent = model.getValue();
+  const initialContent = initialContentMap[filePath.fullpath];
+
+  // check user want to close without saving
+  if (currentContent !== initialContent) {
+    const confirmation = window.confirm("Close tab without saving?");
+    if (confirmation) {
+      closeTab(tabItem, filePath);
+    }
+  } else {
+    closeTab(tabItem, filePath);
+  }
+};
+
 const closeTab = (tabItem, filePath) => {
-  // -------------------------------------------------------------------------- CHECK IF USER WANTS TO SAVE IF CHANGES HAVE BEEN MADE
   // remove tab item
   tabItem.remove();
+
+  // dispose editor model
+  disposeModel(filePath);
 
   // remove from openTabs list
   openTabs.forEach((tab, index) => {
@@ -257,7 +328,6 @@ const closeTab = (tabItem, filePath) => {
   // if no other tabs, display nothing
   if (openTabs.length == 0) {
     filePathActive = null;
-    el.fileTextarea.value = "";
     return;
   }
 
