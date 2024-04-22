@@ -54,13 +54,6 @@ window.onload = () => {
 
   window.onresize = () => {
     editor.layout();
-    const cols = Math.floor(
-      el.terminal.clientWidth / term._core._renderService.dimensions.actualCellWidth
-    );
-    const rows = Math.floor(
-      el.terminal.clientHeight / term._core._renderService.dimensions.actualCellHeight
-    );
-    term.resize(cols, rows);
   };
 };
 
@@ -104,16 +97,19 @@ const disposeModel = (filePath) => {
 
 const openTerminal = () => {
   require(["xterm", "fit"], (xterm, fit) => {
-    term = new xterm.Terminal();
+    term = new xterm.Terminal({
+      cols: 80,
+      rows: 10,
+    });
     term.options = {
       fontSize: 12,
     };
 
     // the FitAddon resizes the terminal for its parent element
-    const fitAddon = new fit.FitAddon();
-    term.loadAddon(fitAddon);
+    // const fitAddon = new fit.FitAddon();
+    // term.loadAddon(fitAddon);
     term.open(el.terminal);
-    fitAddon.fit();
+    // fitAddon.fit();
     term.onData((data) => {
       window.ipc.send("terminal-data", data);
     });
@@ -122,6 +118,12 @@ const openTerminal = () => {
 
 window.ipc.receive("terminal-output", (data) => {
   term.write(data);
+});
+
+window.ipc.receive("close-terminal", (_data) => {
+  console.log("dispose");
+  term.dispose();
+  term = null;
 });
 
 //-------------------------------------------------------------------------------------------------

@@ -10,6 +10,7 @@ let win;
 let openItems = [];
 // has a folder been opened? - treat folder like a workspace
 let isFolder = false;
+let ptyProcess;
 const isMac = process.platform === "darwin";
 var shell = os.platform() === "win32" ? "powershell.exe" : "zsh";
 
@@ -182,6 +183,8 @@ function openFolder() {
 }
 
 const sendFolderContents = (folderPath) => {
+  isFolder = true;
+
   contents = getFolderContents(folderPath);
 
   let folderPathObj = path.parse(folderPath);
@@ -242,19 +245,19 @@ const getFolderContents = (folderPath) => {
 // Terminal functions
 //-------------------------------------------------------------------------------------------------
 
+ipcMain.on("terminal-data", (_event, data) => {
+  ptyProcess.write(data);
+});
+
 const newTerminal = () => {
   win.webContents.send("open-terminal");
 
-  let ptyProcess = pty.spawn(shell, [], {
+  ptyProcess = pty.spawn(shell, [], {
     name: "xterm-color",
     cols: 80,
-    rows: 24,
+    rows: 10,
     cwd: process.env.HOME,
     env: process.env,
-  });
-
-  ipcMain.on("terminal-data", (_event, data) => {
-    ptyProcess.write(data);
   });
 
   ptyProcess.on("data", (data) => {
@@ -263,6 +266,10 @@ const newTerminal = () => {
 };
 
 const closeTerminal = () => {
+  ptyProcess.kill();
+  ptyProcess = null;
+  console.log(ptyProcess);
+
   win.webContents.send("close-terminal");
 };
 
@@ -345,7 +352,16 @@ const menu = [
       {
         label: "New Terminal",
         click: () => {
+          if (ptyProcess) {
+            closeTerminal();
+          }
           newTerminal();
+        },
+      },
+      {
+        label: "Close Terminal",
+        click: () => {
+          closeTerminal();
         },
       },
     ],
