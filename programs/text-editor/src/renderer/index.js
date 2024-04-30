@@ -1,7 +1,8 @@
 requirejs.config({
   paths: {
     vs: "../node_modules/monaco-editor/min/vs",
-    xterm: "../node_modules/xterm/lib/xterm",
+    xterm: "../node_modules/@xterm/xterm/lib/xterm",
+    fit: "../node_modules/@xterm/addon-fit/lib/addon-fit",
   },
 });
 
@@ -23,6 +24,7 @@ window.onload = () => {
     editorArea: document.getElementById("editorarea"),
     editor: document.getElementById("editor"),
     terminal: document.getElementById("terminal"),
+    terminalArea: document.getElementById("terminalarea"),
   };
 
   window.ipc.receive("file", (data) => {
@@ -30,7 +32,6 @@ window.onload = () => {
   });
 
   window.ipc.receive("folder", (data) => {
-    console.log(data);
     addFolder(data);
     addFolderEventListeners();
   });
@@ -39,6 +40,10 @@ window.onload = () => {
     // ----INCORRECT
     content = el.editor.value;
     window.ipc.send("save-file", { filePathActive, content });
+  });
+
+  window.ipc.receive("open-terminal", (_data) => {
+    openTerminal();
   });
 
   require(["vs/editor/editor.main"], () => {
@@ -51,18 +56,6 @@ window.onload = () => {
   window.onresize = () => {
     editor.layout();
   };
-
-  window.ipc.receive("open-terminal", (_data) => {
-    console.log("received");
-    require(["xterm"], (xterm) => {
-      term = new xterm.Terminal();
-      term.open(el.terminal);
-      term.write("Hello World!");
-      term.onData((e) => {
-        term.write(e);
-      });
-    });
-  });
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -98,6 +91,49 @@ const disposeModel = (filePath) => {
     model.dispose();
   }
 };
+
+//-------------------------------------------------------------------------------------------------
+// Terminal
+//-------------------------------------------------------------------------------------------------
+
+const openTerminal = () => {
+  el.terminalArea.style.display = "block";
+
+  require(["xterm", "fit"], (xterm, fit) => {
+    term = new xterm.Terminal({
+      cols: 80,
+      rows: 10,
+    });
+    term.options = {
+      theme: {
+        background: "#3B3B3B",
+      },
+      fontSize: 12,
+    };
+
+    // the FitAddon resizes the terminal for its parent element
+    // const fitAddon = new fit.FitAddon();
+    // term.loadAddon(fitAddon);
+    term.open(el.terminal);
+    // fitAddon.fit();
+    term.onData((data) => {
+      window.ipc.send("terminal-data", data);
+    });
+  });
+  window.dispatchEvent(new Event("resize"));
+};
+
+window.ipc.receive("terminal-output", (data) => {
+  term.write(data);
+});
+
+window.ipc.receive("close-terminal", (_data) => {
+  console.log("dispose");
+  el.terminalArea.style.display = "none";
+  term.dispose();
+  term = null;
+  window.dispatchEvent(new Event("resize"));
+});
 
 //-------------------------------------------------------------------------------------------------
 // File Management
