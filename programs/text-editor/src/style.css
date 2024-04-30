@@ -86,7 +86,7 @@ body {
 
 #editorarea {
     width: 100%;
-    height: calc(100% - 150px);
+    height: 100%;
 }
 
 #editor {
@@ -99,14 +99,18 @@ body {
 /* terminal style ------------------------------------------------------- */
 
 #terminalarea {
+    display: none;
+    background-color: var(--primary-bg-color);
     justify-content: flex-end;
-    height: 150px;
+    height: 225px;
     width: 100%;
 }
 
 #terminal {
     height: 100%;
     width: 100%;
+    border-left: 3px solid rgb(46, 46, 46);
+    border-top: 3px solid rgb(46, 46, 46);
 }
 
 /* explorer style ------------------------------------------------------- */

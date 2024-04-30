@@ -24,6 +24,7 @@ window.onload = () => {
     editorArea: document.getElementById("editorarea"),
     editor: document.getElementById("editor"),
     terminal: document.getElementById("terminal"),
+    terminalArea: document.getElementById("terminalarea"),
   };
 
   window.ipc.receive("file", (data) => {
@@ -96,12 +97,17 @@ const disposeModel = (filePath) => {
 //-------------------------------------------------------------------------------------------------
 
 const openTerminal = () => {
+  el.terminalArea.style.display = "block";
+
   require(["xterm", "fit"], (xterm, fit) => {
     term = new xterm.Terminal({
       cols: 80,
       rows: 10,
     });
     term.options = {
+      theme: {
+        background: "#3B3B3B",
+      },
       fontSize: 12,
     };
 
@@ -114,6 +120,7 @@ const openTerminal = () => {
       window.ipc.send("terminal-data", data);
     });
   });
+  window.dispatchEvent(new Event("resize"));
 };
 
 window.ipc.receive("terminal-output", (data) => {
@@ -122,8 +129,10 @@ window.ipc.receive("terminal-output", (data) => {
 
 window.ipc.receive("close-terminal", (_data) => {
   console.log("dispose");
+  el.terminalArea.style.display = "none";
   term.dispose();
   term = null;
+  window.dispatchEvent(new Event("resize"));
 });
 
 //-------------------------------------------------------------------------------------------------

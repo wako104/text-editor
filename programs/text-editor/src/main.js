@@ -3,7 +3,6 @@ const path = require("path");
 const fs = require("fs-extra");
 const os = require("os");
 const pty = require("node-pty");
-const { spawn } = require("child_process");
 
 let win;
 // all currently opened items (folders and files)
