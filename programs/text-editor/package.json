@@ -8,7 +8,9 @@
     "dev": "cross-env NODE_ENV=development electron . --inspect=5858",
     "rebuild": "electron-rebuild",
     "reload": "rs && electron .",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "package": "electron-packager . --overwrite --out='./dist'",
+    "package-win": "electron-packager . --overwrite --out='./dist' --platform=win32 --arch=x64"
   },
   "repository": {
     "type": "git",
@@ -25,14 +27,16 @@
     "bulma": "^0.9.4",
     "cross-env": "^7.0.3",
     "electron": "^30.0.1",
+    "electron-packager": "^17.1.2",
     "electron-rebuild": "^3.2.9",
-    "electron-reloader": "^1.2.3",
-    "requirejs": "^2.3.6"
+    "electron-reloader": "^1.2.3"
   },
   "dependencies": {
     "@xterm/addon-fit": "^0.10.0",
     "@xterm/xterm": "^5.5.0",
+    "fs-extra": "^11.2.0",
     "monaco-editor": "^0.47.0",
-    "node-pty": "^1.0.0"
+    "node-pty": "^1.0.0",
+    "requirejs": "^2.3.6"
   }
 }
