@@ -1,16 +1,18 @@
 :root {
     --primary-bg-color: #3B3B3B;
     --hover-color: #525252;
+    --text-color: #E1E4E4;
 }
 
 * {
     margin: 0;
     padding: 0;
-    color: #E1E4E4;
+    color: var(--text-color);
 }
 
 body {
     font-family: Arial, sans-serif;
+    overflow: hidden;
 }
 
 ::-webkit-scrollbar {
@@ -48,6 +50,7 @@ body {
     height: 100%;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 /* tab style ------------------------------------------------------- */
@@ -58,28 +61,61 @@ body {
     width: 100%;
     min-height: 30px;
     background-color: var(--primary-bg-color);
+    overflow: hidden;
 }
 
 #tablist {
     display: flex;
     list-style-type: none;
     padding: 0;
+    overflow-x: auto;
+    white-space: no-wrap;
 }
 
 #tablist li {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 150px;
+    min-width: 150px;
+    max-width: 150px;
     margin-right: 5px;
-    border: 1px solid #ccc;
+    border: 1px solid var(--text-color);
+    white-space: nowrap;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 #tablist button {
+    white-space: nowrap;
+    text-align: left;
+    /* overflow: hidden; */
+    flex-grow: 1;
     padding: 5px 10px;
     cursor: pointer;
     border: none;
     background: none;
 }
 
+#tablist .tabbutton {
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+#tablist .highlighted {
+    background-color: var(--hover-color);
+}
+
+#tablist .closebutton {
+    text-align: center;
+    padding: 5px 8px;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
 #tablist .closebutton:hover {
     background-color: var(--hover-color);
+    /* flex-shrink: 0; */
 }
 
 /* editor style ------------------------------------------------------- */
@@ -128,8 +164,23 @@ body {
     padding: 0;
 }
 
-.explorer {
+.explorer-wrapper {
+    max-height: 100%;
+    display: flex;
     padding: 10px;
+    flex-direction: column;
+}
+
+.explorer-title {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    padding-bottom: 10px;
+}
+
+.explorer {
+    overflow-y: auto;
+    padding-bottom: 40px;
 }
 
 .explorer h3 {
@@ -163,5 +214,5 @@ body {
 }
 
 #exploreritems #folder .expanded i {
-    transform: rotate(-90deg);
+    transform: rotate(90deg);
 }

@@ -2,7 +2,6 @@ requirejs.config({
   paths: {
     vs: "../node_modules/monaco-editor/min/vs",
     xterm: "../node_modules/@xterm/xterm/lib/xterm",
-    fit: "../node_modules/@xterm/addon-fit/lib/addon-fit",
   },
 });
 
@@ -99,7 +98,7 @@ const disposeModel = (filePath) => {
 const openTerminal = () => {
   el.terminalArea.style.display = "block";
 
-  require(["xterm", "fit"], (xterm, fit) => {
+  require(["xterm"], (xterm) => {
     term = new xterm.Terminal({
       cols: 80,
       rows: 10,
@@ -111,11 +110,7 @@ const openTerminal = () => {
       fontSize: 12,
     };
 
-    // the FitAddon resizes the terminal for its parent element
-    // const fitAddon = new fit.FitAddon();
-    // term.loadAddon(fitAddon);
     term.open(el.terminal);
-    // fitAddon.fit();
     term.onData((data) => {
       window.ipc.send("terminal-data", data);
     });
@@ -157,7 +152,9 @@ const addFileToList = (file, parent) => {
 
   // set up file item
   let fileItem = document.createElement("li");
-
+  if (parent !== el.explorer) {
+    fileItem.style.display = "none";
+  }
   // set up file link
   let fileLink = document.createElement("button");
   fileLink.textContent = filePath.base;
@@ -175,7 +172,6 @@ const addFileToList = (file, parent) => {
 };
 
 const removeFileFromList = (filePath) => {
-  //remove from file list -------------------------------------- USING FILEPATH.BASE NOT SUFFICIENT
   Array.from(el.explorer.children).forEach((item) => {
     if (item.textContent === filePath.base) {
       item.remove();
@@ -233,12 +229,15 @@ const addFolder = (folder, parent = el.explorer) => {
 
   let folderItem = document.createElement("li");
   folderItem.setAttribute("id", "folder");
+  if (parent !== el.explorer) {
+    folderItem.style.display = "none";
+  }
 
   // set up folder link
   let folderLink = document.createElement("button");
   // add arrow icon
   let icon = document.createElement("i");
-  icon.classList.add("bx", "bxs-chevron-down");
+  icon.classList.add("bx", "bxs-chevron-right");
   let buttonText = document.createTextNode(folderPath.base);
 
   folderLink.appendChild(icon);
@@ -274,7 +273,7 @@ const addFolderEventListeners = () => {
     let sibling = target.nextElementSibling;
 
     while (sibling) {
-      sibling.style.display = sibling.style.display == "none" ? "block" : "none";
+      sibling.style.display = sibling.style.display == "block" ? "none" : "block";
       sibling = sibling.nextElementSibling;
     }
 
@@ -302,8 +301,10 @@ const addTab = (file) => {
   tabLink.textContent = filePath.base;
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
+    highlightTab(filePath);
   });
   tabLink.setAttribute("class", "tabbutton");
+  tabLink.dataset.fullpath = filePath.fullpath;
 
   // set up close button
   closeButton.textContent = "X";
@@ -386,4 +387,21 @@ const isTabOpen = (filePath) => {
 
   // tab is not open
   return found;
+};
+
+const highlightTab = (filePath) => {
+  let tabs = document.querySelectorAll("#tablist li button");
+
+  // remove current highlighted tab
+  tabs.forEach((tab) => {
+    tab.classList.remove("highlighted");
+  });
+
+  tabs.forEach((tab) => {
+    console.log("fullpath: ", tab.dataset.fullpath);
+    if (tab.dataset.fullpath === filePath.fullpath) {
+      console.log("fullpath:", tab.dataset.fullpath);
+      tab.classList.add("highlighted");
+    }
+  });
 };
