@@ -8,7 +8,7 @@ let win;
 // all currently opened items (folders and files)
 let openItems = [];
 // has a folder been opened? - treat folder like a workspace
-let isFolder = false;
+let isFolder;
 let ptyProcess;
 const isMac = process.platform === "darwin";
 var shell = os.platform() === "win32" ? "powershell.exe" : "zsh";
@@ -19,6 +19,7 @@ if (process.env.NODE_ENV === "development") {
 
 // create main window
 function createWindow() {
+  isFolder = false;
   win = new BrowserWindow({
     width: 925,
     height: 600,
@@ -83,10 +84,22 @@ const openFile = () => {
 
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
-        win.webContents.send("file", {
-          path: filePathObj,
-          data,
-        });
+
+        if (isFolder) {
+          createWindow();
+          win.webContents.on("did-finish-load", () => {
+            win.webContents.send("file", {
+              path: filePathObj,
+              data,
+            });
+          });
+        } else {
+          win.webContents.send("file", {
+            path: filePathObj,
+            data,
+          });
+        }
+        openItems.push({ path: filePathObj, data });
       });
     })
     .catch((err) => {
@@ -121,6 +134,11 @@ ipcMain.on("save-file", (_event, data) => {
   }
 });
 
+// menu save as button
+const saveFileAs = () => {
+  win.webContents.send("get-save-as");
+};
+
 // save as button
 ipcMain.on("save-file-as", (_event, data) => {
   saveAs(data);
@@ -152,7 +170,7 @@ const saveAs = (fileContent) => {
 // Folder functions
 //-------------------------------------------------------------------------------------------------
 
-function openFolder() {
+const openFolder = () => {
   dialog
     .showOpenDialog({
       properties: ["openDirectory"],
@@ -179,11 +197,9 @@ function openFolder() {
     .catch((err) => {
       console.error(err);
     });
-}
+};
 
 const sendFolderContents = (folderPath) => {
-  isFolder = true;
-
   contents = getFolderContents(folderPath);
 
   let folderPathObj = path.parse(folderPath);
@@ -336,6 +352,9 @@ const menu = [
       {
         label: "Save-As",
         accelerator: isMac ? "Cmd+Shift+S" : "Ctrl+Shift+S",
+        click: () => {
+          saveFileAs();
+        },
       },
     ],
   },

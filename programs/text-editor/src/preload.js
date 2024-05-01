@@ -19,6 +19,7 @@ contextBridge.exposeInMainWorld("ipc", {
       "file",
       "folder",
       "get-save",
+      "get-save-as",
       "open-terminal",
       "close-terminal",
       "terminal-output",

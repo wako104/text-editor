@@ -36,9 +36,13 @@ window.onload = () => {
   });
 
   window.ipc.receive("get-save", (_data) => {
-    // ----INCORRECT
-    content = el.editor.value;
+    let content = getContent();
     window.ipc.send("save-file", { filePathActive, content });
+  });
+
+  window.ipc.receive("get-save-as", (_data) => {
+    let content = getContent();
+    window.ipc.send("save-file-as", { content });
   });
 
   window.ipc.receive("open-terminal", (_data) => {
@@ -89,6 +93,13 @@ const disposeModel = (filePath) => {
   if (model) {
     model.dispose();
   }
+};
+
+const getContent = () => {
+  const uri = monaco.Uri.parse(filePathActive.fullpath);
+  const model = monaco.editor.getModel(uri);
+  const value = model.getValue();
+  return value;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -190,6 +201,7 @@ const displayFile = (filePath) => {
   const model = monaco.editor.getModel(uri);
   editor.setModel(model);
   filePathActive = filePath;
+  highlightTab(filePath);
 };
 
 const areFilesEqual = (file1, file2) => {
@@ -301,7 +313,6 @@ const addTab = (file) => {
   tabLink.textContent = filePath.base;
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
-    highlightTab(filePath);
   });
   tabLink.setAttribute("class", "tabbutton");
   tabLink.dataset.fullpath = filePath.fullpath;
