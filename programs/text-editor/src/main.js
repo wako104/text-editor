@@ -80,7 +80,6 @@ const openFile = () => {
 
       fs.readFile(filePath, "utf8", (err, data) => {
         if (err) throw err;
-        console.log("readfile: ", data);
 
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
@@ -141,7 +140,7 @@ const saveFileAs = () => {
 
 // save as button
 ipcMain.on("save-file-as", (_event, data) => {
-  saveAs(data);
+  saveAs(data.content);
 });
 
 // save as function
@@ -151,6 +150,7 @@ const saveAs = (fileContent) => {
       filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
+      console.log(fileContent);
       fs.writeFile(filePath, fileContent, (error) => {
         if (error) {
           console.log("error");
@@ -159,7 +159,7 @@ const saveAs = (fileContent) => {
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: filePathObj,
+          path: filePathObj,
           data: fileContent,
         });
       });
