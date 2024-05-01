@@ -172,7 +172,6 @@ const addFileToList = (file, parent) => {
 };
 
 const removeFileFromList = (filePath) => {
-  //remove from file list -------------------------------------- USING FILEPATH.BASE NOT SUFFICIENT
   Array.from(el.explorer.children).forEach((item) => {
     if (item.textContent === filePath.base) {
       item.remove();
@@ -302,8 +301,10 @@ const addTab = (file) => {
   tabLink.textContent = filePath.base;
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
+    highlightTab(filePath);
   });
   tabLink.setAttribute("class", "tabbutton");
+  tabLink.dataset.fullpath = filePath.fullpath;
 
   // set up close button
   closeButton.textContent = "X";
@@ -386,4 +387,21 @@ const isTabOpen = (filePath) => {
 
   // tab is not open
   return found;
+};
+
+const highlightTab = (filePath) => {
+  let tabs = document.querySelectorAll("#tablist li button");
+
+  // remove current highlighted tab
+  tabs.forEach((tab) => {
+    tab.classList.remove("highlighted");
+  });
+
+  tabs.forEach((tab) => {
+    console.log("fullpath: ", tab.dataset.fullpath);
+    if (tab.dataset.fullpath === filePath.fullpath) {
+      console.log("fullpath:", tab.dataset.fullpath);
+      tab.classList.add("highlighted");
+    }
+  });
 };
