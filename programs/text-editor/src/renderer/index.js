@@ -36,9 +36,13 @@ window.onload = () => {
   });
 
   window.ipc.receive("get-save", (_data) => {
-    // ----INCORRECT
-    content = el.editor.value;
+    let content = getContent();
     window.ipc.send("save-file", { filePathActive, content });
+  });
+
+  window.ipc.receive("get-save-as", (_data) => {
+    let content = getContent();
+    window.ipc.send("save-file-as", { content });
   });
 
   window.ipc.receive("open-terminal", (_data) => {
@@ -71,7 +75,6 @@ const createModelForFile = (file) => {
 
 const getLanguageId = (extension) => {
   const languages = monaco.languages.getLanguages();
-  console.log(languages);
   let languageId = null;
 
   languages.forEach((language) => {
@@ -89,6 +92,13 @@ const disposeModel = (filePath) => {
   if (model) {
     model.dispose();
   }
+};
+
+const getContent = () => {
+  const uri = monaco.Uri.parse(filePathActive.fullpath);
+  const model = monaco.editor.getModel(uri);
+  const value = model.getValue();
+  return value;
 };
 
 //-------------------------------------------------------------------------------------------------
@@ -123,7 +133,6 @@ window.ipc.receive("terminal-output", (data) => {
 });
 
 window.ipc.receive("close-terminal", (_data) => {
-  console.log("dispose");
   el.terminalArea.style.display = "none";
   term.dispose();
   term = null;
@@ -140,8 +149,6 @@ const handleOpenFile = (file, parent = el.explorer) => {
     addFileToList(file, parent);
     initialContentMap[file.path.fullpath] = file.data;
   } else {
-    // if the file is already open in the explorer
-    //----------------------------------------------- ASK USER - ARE YOU SURE?
     replaceFileData(file);
   }
 };
@@ -190,6 +197,7 @@ const displayFile = (filePath) => {
   const model = monaco.editor.getModel(uri);
   editor.setModel(model);
   filePathActive = filePath;
+  highlightTab(filePath);
 };
 
 const areFilesEqual = (file1, file2) => {
@@ -210,7 +218,6 @@ const fileInList = (filePath) => {
 const replaceFileData = (file) => {
   fileDataList.forEach((listFile) => {
     if (areFilesEqual(listFile.path, file.path)) {
-      console.log(filePathActive);
       listFile.data = file.data;
       if (filePathActive.fullpath === file.path.fullpath) {
         displayFile(file.path);
@@ -251,7 +258,6 @@ const addFolder = (folder, parent = el.explorer) => {
   contents.forEach((item) => {
     // if item is a file, add as file
     if (item.type == "file") {
-      // ------------------------------------------------------------- find parent through filepath
       handleOpenFile(item, folderItem);
     }
 
@@ -265,11 +271,9 @@ const addFolder = (folder, parent = el.explorer) => {
 // adds event listener - hide files - to all folders
 const addFolderEventListeners = () => {
   const folderElements = document.querySelectorAll("[id='folder']");
-  console.log(folderElements);
 
   let root = folderElements[0];
   root.addEventListener("click", ({ target }) => {
-    console.log(target);
     let sibling = target.nextElementSibling;
 
     while (sibling) {
@@ -301,7 +305,6 @@ const addTab = (file) => {
   tabLink.textContent = filePath.base;
   tabLink.addEventListener("click", () => {
     displayFile(filePath);
-    highlightTab(filePath);
   });
   tabLink.setAttribute("class", "tabbutton");
   tabLink.dataset.fullpath = filePath.fullpath;
@@ -398,9 +401,7 @@ const highlightTab = (filePath) => {
   });
 
   tabs.forEach((tab) => {
-    console.log("fullpath: ", tab.dataset.fullpath);
     if (tab.dataset.fullpath === filePath.fullpath) {
-      console.log("fullpath:", tab.dataset.fullpath);
       tab.classList.add("highlighted");
     }
   });

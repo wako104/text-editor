@@ -8,7 +8,7 @@ let win;
 // all currently opened items (folders and files)
 let openItems = [];
 // has a folder been opened? - treat folder like a workspace
-let isFolder = false;
+let isFolder;
 let ptyProcess;
 const isMac = process.platform === "darwin";
 var shell = os.platform() === "win32" ? "powershell.exe" : "zsh";
@@ -18,7 +18,8 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // create main window
-function createWindow() {
+const createWindow = () => {
+  isFolder = false;
   win = new BrowserWindow({
     width: 925,
     height: 600,
@@ -30,9 +31,8 @@ function createWindow() {
     },
   });
 
-  win.webContents.openDevTools();
   win.loadFile(path.join(__dirname, "index.html"));
-}
+};
 
 //-------------------------------------------------------------------------------------------------
 // File functions
@@ -45,7 +45,6 @@ ipcMain.on("new-file", (_event, _arg) => {
       filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
-      console.log("file path: ", filePath);
       fs.writeFile(filePath, "", (error) => {
         if (error) {
           console.log("error");
@@ -66,27 +65,35 @@ const openFile = () => {
     })
     .then((result) => {
       if (result.canceled) {
-        console.log("canceled");
         return;
       }
       if (result.filePaths.length != 1) {
-        console.error("choose one file");
         return;
       }
 
       const filePath = result.filePaths[0];
-      console.log("file selected: ", filePath);
 
       fs.readFile(filePath, "utf8", (err, data) => {
         if (err) throw err;
-        console.log("readfile: ", data);
 
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
-        win.webContents.send("file", {
-          path: filePathObj,
-          data,
-        });
+
+        if (isFolder) {
+          createWindow();
+          win.webContents.on("did-finish-load", () => {
+            win.webContents.send("file", {
+              path: filePathObj,
+              data,
+            });
+          });
+        } else {
+          win.webContents.send("file", {
+            path: filePathObj,
+            data,
+          });
+        }
+        openItems.push({ path: filePathObj, data });
       });
     })
     .catch((err) => {
@@ -103,7 +110,6 @@ ipcMain.on("save-file", (_event, data) => {
   filePath = data.filePathActive;
   fileContent = data.content;
   let path = filePath.fullpath;
-  console.log(path);
   if (fs.existsSync(path)) {
     // if file exists, save to file
     fs.writeFile(path, fileContent, (error) => {
@@ -121,9 +127,14 @@ ipcMain.on("save-file", (_event, data) => {
   }
 });
 
+// menu save as button
+const saveFileAs = () => {
+  win.webContents.send("get-save-as");
+};
+
 // save as button
 ipcMain.on("save-file-as", (_event, data) => {
-  saveAs(data);
+  saveAs(data.content);
 });
 
 // save as function
@@ -141,7 +152,7 @@ const saveAs = (fileContent) => {
         let filePathObj = path.parse(filePath);
         filePathObj["fullpath"] = filePathObj.dir + "/" + filePathObj.base;
         win.webContents.send("file", {
-          filepath: filePathObj,
+          path: filePathObj,
           data: fileContent,
         });
       });
@@ -152,19 +163,17 @@ const saveAs = (fileContent) => {
 // Folder functions
 //-------------------------------------------------------------------------------------------------
 
-function openFolder() {
+const openFolder = () => {
   dialog
     .showOpenDialog({
       properties: ["openDirectory"],
     })
     .then((result) => {
       if (result.canceled) {
-        console.log("canceled");
         return;
       }
 
       const folderPath = result.filePaths[0];
-      console.log("folder selected: ", folderPath);
 
       // create new window if current window is not empty
       if (openItems.length > 0) {
@@ -179,11 +188,9 @@ function openFolder() {
     .catch((err) => {
       console.error(err);
     });
-}
+};
 
 const sendFolderContents = (folderPath) => {
-  isFolder = true;
-
   contents = getFolderContents(folderPath);
 
   let folderPathObj = path.parse(folderPath);
@@ -267,7 +274,6 @@ const newTerminal = () => {
 const closeTerminal = () => {
   ptyProcess.kill();
   ptyProcess = null;
-  console.log(ptyProcess);
 
   win.webContents.send("close-terminal");
 };
@@ -279,7 +285,7 @@ const closeTerminal = () => {
 app.whenReady().then(() => {
   createWindow();
 
-  // implement window
+  // implement menu
   const mainMenu = Menu.buildFromTemplate(menu);
   Menu.setApplicationMenu(mainMenu);
 
@@ -336,6 +342,9 @@ const menu = [
       {
         label: "Save-As",
         accelerator: isMac ? "Cmd+Shift+S" : "Ctrl+Shift+S",
+        click: () => {
+          saveFileAs();
+        },
       },
     ],
   },
@@ -370,9 +379,8 @@ const menu = [
   },
 ];
 
-// close window mac version
-// app.on("window-all-closed", () => {
-//   if (!isMac) {
-//     app.quit();
-//   }
-// });
+app.on("window-all-closed", () => {
+  if (!isMac) {
+    app.quit();
+  }
+});
