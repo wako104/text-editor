@@ -18,7 +18,7 @@ if (process.env.NODE_ENV === "development") {
 }
 
 // create main window
-function createWindow() {
+const createWindow = () => {
   isFolder = false;
   win = new BrowserWindow({
     width: 925,
@@ -31,9 +31,8 @@ function createWindow() {
     },
   });
 
-  win.webContents.openDevTools();
   win.loadFile(path.join(__dirname, "index.html"));
-}
+};
 
 //-------------------------------------------------------------------------------------------------
 // File functions
@@ -46,7 +45,6 @@ ipcMain.on("new-file", (_event, _arg) => {
       filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
-      console.log("file path: ", filePath);
       fs.writeFile(filePath, "", (error) => {
         if (error) {
           console.log("error");
@@ -67,16 +65,13 @@ const openFile = () => {
     })
     .then((result) => {
       if (result.canceled) {
-        console.log("canceled");
         return;
       }
       if (result.filePaths.length != 1) {
-        console.error("choose one file");
         return;
       }
 
       const filePath = result.filePaths[0];
-      console.log("file selected: ", filePath);
 
       fs.readFile(filePath, "utf8", (err, data) => {
         if (err) throw err;
@@ -115,7 +110,6 @@ ipcMain.on("save-file", (_event, data) => {
   filePath = data.filePathActive;
   fileContent = data.content;
   let path = filePath.fullpath;
-  console.log(path);
   if (fs.existsSync(path)) {
     // if file exists, save to file
     fs.writeFile(path, fileContent, (error) => {
@@ -150,7 +144,6 @@ const saveAs = (fileContent) => {
       filters: [{ name: "All Files", extensions: ["*"] }],
     })
     .then(({ filePath }) => {
-      console.log(fileContent);
       fs.writeFile(filePath, fileContent, (error) => {
         if (error) {
           console.log("error");
@@ -177,12 +170,10 @@ const openFolder = () => {
     })
     .then((result) => {
       if (result.canceled) {
-        console.log("canceled");
         return;
       }
 
       const folderPath = result.filePaths[0];
-      console.log("folder selected: ", folderPath);
 
       // create new window if current window is not empty
       if (openItems.length > 0) {
@@ -283,7 +274,6 @@ const newTerminal = () => {
 const closeTerminal = () => {
   ptyProcess.kill();
   ptyProcess = null;
-  console.log(ptyProcess);
 
   win.webContents.send("close-terminal");
 };
@@ -295,7 +285,7 @@ const closeTerminal = () => {
 app.whenReady().then(() => {
   createWindow();
 
-  // implement window
+  // implement menu
   const mainMenu = Menu.buildFromTemplate(menu);
   Menu.setApplicationMenu(mainMenu);
 
@@ -389,9 +379,8 @@ const menu = [
   },
 ];
 
-// close window mac version
-// app.on("window-all-closed", () => {
-//   if (!isMac) {
-//     app.quit();
-//   }
-// });
+app.on("window-all-closed", () => {
+  if (!isMac) {
+    app.quit();
+  }
+});

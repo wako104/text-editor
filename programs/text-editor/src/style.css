@@ -204,7 +204,7 @@ body {
 }
 
 #exploreritems li button:hover  {
-    background-color: #525252;
+    background-color: var(--hover-color);
 }
 
 #exploreritems #folder i {
